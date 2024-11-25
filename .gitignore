@@ -1,5 +1,5 @@
 # Personal trades
-trade_logs/*
+trade_logs/*.md
 trade_logs.db
 
 # Byte-compiled / optimized / DLL files
