@@ -8,10 +8,6 @@ from database_utils import DatabaseManager
 def parse_general_markdown(file_path):
     """
     Parse a markdown file to extract trade data flexibly and clean the output.
-    Args:
-    - file_path (str): Path to the markdown file.
-    Returns:
-    - dict: Parsed and cleaned data with extracted fields.
     """
     try:
         with open(file_path, 'r', encoding='utf-8') as file:
@@ -51,6 +47,7 @@ def parse_general_markdown(file_path):
                 parsed_data['trade_duration_minutes'] = max(0, round((closed_time - opened_time).total_seconds() / 60))
                 parsed_data['open_day'] = opened_time.strftime("%A")  # Day of the week
                 parsed_data['open_time'] = opened_time.strftime("%H:%M")  # Time only
+                parsed_data['open_month'] = extract_open_month(raw_opened)  # Add open month
             except ValueError as e:
                 print(f"Error parsing dates in {file_path}: {e}")
                 parsed_data['trade_duration_minutes'] = 0  # Default to 0 if parsing fails
@@ -67,9 +64,9 @@ def parse_general_markdown(file_path):
             try:
                 profit_loss_value = float(profit_loss_cleaned)
                 parsed_data['profit_loss'] = profit_loss_cleaned
-                if profit_loss_value > 0:
+                if profit_loss_value > 0.5:
                     parsed_data['trade_outcome'] = 'Win'
-                elif abs(profit_loss_value) < 0.01:
+                elif abs(profit_loss_value) < 0.5:
                     parsed_data['trade_outcome'] = 'Break Even'
                 else:
                     parsed_data['trade_outcome'] = 'Loss'
@@ -103,6 +100,18 @@ def determine_killzone(opened_time):
     except Exception as e:
         print(f"Error determining killzone: {e}")
         return None
+
+def extract_open_month(opened_time):
+    """
+    Extract and format the open month from the opened time string.
+    """
+    try:
+        opened_datetime = datetime.strptime(opened_time, "%d/%m/%Y %H:%M")
+        return opened_datetime.strftime("%B")  # Format as "Month Year"
+    except ValueError as e:
+        print(f"Error extracting open month: {e}")
+        return "Unknown"  # Default value if parsing fails
+
 
 
 def process_and_store_markdown(directory):
