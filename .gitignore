@@ -1,6 +1,5 @@
 # Personal trades
-trade_logs/*.md
-trade_logs.db
+app/data/*
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
