@@ -1,150 +1,224 @@
 import os
 import re
+import pytz  # Import pytz for timezone handling
+import sqlite3
+import shutil
 from datetime import datetime
-from pytz import timezone
-from utils.data_schema import TradeEntry
-from utils.database_utils import DatabaseManager
+from tkinter import Tk, filedialog, simpledialog, messagebox
 
-def parse_general_markdown(file_path):
+# Define the base directory for the app
+BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "app"))
+
+# Define the path to the data directory and the database file
+DATA_DIR = os.path.join(BASE_DIR, "data")
+DB_NAME = os.path.join(DATA_DIR, "trades.db")
+
+# Define the backups path under the `data` directory
+BACKUP_DIR = os.path.join(DATA_DIR, "backups")
+os.makedirs(BACKUP_DIR, exist_ok=True)  # Ensure the backups directory exists
+
+class DatabaseManager:
+    @staticmethod
+    def get_accounts():
+        """
+        Retrieve all accounts from the database.
+        """
+        try:
+            conn = sqlite3.connect(DB_NAME)
+            cursor = conn.cursor()
+            cursor.execute("SELECT id, name FROM accounts")
+            accounts = cursor.fetchall()
+            conn.close()
+            return accounts
+        except Exception as e:
+            print(f"Error fetching accounts: {e}")
+            return []
+
+    @staticmethod
+    def insert_trade(trade_entry, account_id):
+        """
+        Insert a trade entry into the database for the specified account.
+        """
+        try:
+            conn = sqlite3.connect(DB_NAME)
+            cursor = conn.cursor()
+            sql = """
+                INSERT INTO trades (
+                    account_id, filename, position_size, opened, closed,
+                    pips_gained_lost, profit_loss, risk_reward, strategy_used,
+                    open_day, open_time, trade_outcome, open_month,
+                    trade_duration_minutes, killzone
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """
+            values = (
+                account_id,
+                trade_entry.get("filename"),
+                trade_entry.get("position_size"),
+                trade_entry.get("opened"),
+                trade_entry.get("closed"),
+                trade_entry.get("pips_gained_lost"),
+                trade_entry.get("profit_loss"),
+                trade_entry.get("risk_reward"),
+                trade_entry.get("strategy_used"),
+                trade_entry.get("open_day"),
+                trade_entry.get("open_time"),
+                trade_entry.get("trade_outcome"),
+                trade_entry.get("open_month"),
+                trade_entry.get("trade_duration_minutes"),
+                trade_entry.get("killzone"),
+            )
+            cursor.execute(sql, values)
+            conn.commit()
+            conn.close()
+            print(f"Trade '{trade_entry.get('filename')}' inserted.")
+        except sqlite3.IntegrityError:
+            print(f"Trade '{trade_entry.get('filename')}' already exists.")
+        except Exception as e:
+            print(f"Error inserting trade: {e}")
+
+def parse_markdown_file(file_path):
     """
-    Parse a markdown file to extract trade data flexibly and clean the output.
+    Parse a markdown file to extract trade details.
+    Skips trades with invalid or missing critical fields.
     """
+    trade_entry = {}
     try:
-        with open(file_path, 'r', encoding='utf-8') as file:
-            template_text = file.read()
+        with open(file_path, "r", encoding="utf-8") as file:
+            content = file.read()
 
-        # Define flexible regex patterns for each field
-        patterns = {
-            'position_size': r'Position\s*Size\s*:?\s*([^\n]+)',
-            'opened': r'Opened\s*:?\s*([^\n]+)',
-            'closed': r'Closed\s*:?\s*([^\n]+)',
-            'pips_gained_lost': r'Pips\s*Gained/Lost\s*:?\s*([^\n]+)',
-            'profit_loss': r'Profit/Loss\s*:?\s*([^\n]+)',
-            'risk_reward': r'R/R\s*:?\s*([^\n]+)',
-            'strategy_used': r'Strategy\s*Used\s*:?\s*([^\n]+)'
+        # Extract fields using regex
+        fields = {
+            "position_size": r"Position\s*Size\s*:\s*(.*)",
+            "opened": r"Opened\s*:\s*(.*)",
+            "closed": r"Closed\s*:\s*(.*)",
+            "pips_gained_lost": r"Pips\s*Gained/Lost\s*:\s*(.*)",
+            "profit_loss": r"Profit/Loss\s*:\s*(.*)",
+            "risk_reward": r"R/R\s*:\s*(.*)",
+            "strategy_used": r"Strategy\s*Used\s*:\s*(.*)",
         }
 
-        # Extract and clean the fields
-        parsed_data = {}
-        for key, pattern in patterns.items():
-            match = re.search(pattern, template_text, re.IGNORECASE)
+        for key, pattern in fields.items():
+            match = re.search(pattern, content, re.IGNORECASE)
             if match:
-                value = match.group(1).strip()
-                value = re.sub(r'[\*\€]', '', value)  # Remove unwanted characters
-                parsed_data[key] = value
+                trade_entry[key] = match.group(1).strip()
 
-        # Preserve original time formats for 'opened' and 'closed'
-        raw_opened = parsed_data.get('opened', '').strip()
-        raw_closed = parsed_data.get('closed', '').strip()
-        parsed_data['opened_raw'] = raw_opened
-        parsed_data['closed_raw'] = raw_closed
+        # Skip trades marked as missed or with missing profit_loss
+        if not trade_entry.get("profit_loss") or trade_entry["profit_loss"].strip() == "#":
+            print(f"Skipping missed or invalid trade: '{file_path}'")
+            return None
 
-        # Parse and clean the 'opened' and 'closed' fields
+        # Parse and clean 'opened' and 'closed' fields
+        raw_opened = trade_entry.get("opened", "").strip().lstrip("*")
+        raw_closed = trade_entry.get("closed", "").strip().lstrip("*")
+
+        def clean_date(date_str):
+            """Clean the date string by stripping unnecessary characters."""
+            return date_str.replace("*", "").strip()
+
+        raw_opened = clean_date(raw_opened)
+        raw_closed = clean_date(raw_closed)
+
         if raw_opened and raw_closed:
             try:
                 opened_time = datetime.strptime(raw_opened, "%d/%m/%Y %H:%M")
                 closed_time = datetime.strptime(raw_closed, "%d/%m/%Y %H:%M")
-                parsed_data['trade_duration_minutes'] = max(0, round((closed_time - opened_time).total_seconds() / 60))
-                parsed_data['open_day'] = opened_time.strftime("%A")  # Day of the week
-                parsed_data['open_time'] = opened_time.strftime("%H:%M")  # Time only
-                parsed_data['open_month'] = extract_open_month(raw_opened)  # Add open month
+                trade_entry["trade_duration_minutes"] = max(0, (closed_time - opened_time).total_seconds() // 60)
+                trade_entry["open_day"] = opened_time.strftime("%A")
+                trade_entry["open_time"] = opened_time.strftime("%H:%M")
+                trade_entry["open_month"] = opened_time.strftime("%B")
             except ValueError as e:
-                print(f"Error parsing dates in {file_path}: {e}")
-                parsed_data['trade_duration_minutes'] = 0  # Default to 0 if parsing fails
+                print(f"Error parsing dates in file '{file_path}': {e}")
+                return None  # Skip trade if date parsing fails
 
-        # Determine the killzone
-        parsed_data['killzone'] = determine_killzone(raw_opened)
+        # Determine killzone
+        trade_entry["killzone"] = determine_killzone(raw_opened)
 
-        # Clean and determine the trade outcome
-        if 'profit_loss' in parsed_data:
-            if parsed_data['profit_loss'] == '#':  # Skip missed trades
-                print(f"Skipping missed trade in file: {file_path}")
-                return None
-            profit_loss_cleaned = re.sub(r'[^\d\.\-\+]', '', parsed_data['profit_loss'])
-            try:
-                profit_loss_value = float(profit_loss_cleaned)
-                parsed_data['profit_loss'] = profit_loss_cleaned
-                if profit_loss_value > 0.5:
-                    parsed_data['trade_outcome'] = 'Win'
-                elif abs(profit_loss_value) < 0.5:
-                    parsed_data['trade_outcome'] = 'Break Even'
-                else:
-                    parsed_data['trade_outcome'] = 'Loss'
-            except ValueError:
-                parsed_data['trade_outcome'] = 'Unknown'
+        # Clean and interpret 'profit_loss' to determine trade outcome
+        profit_loss_cleaned = re.sub(r"[^\d\.\-\+]", "", trade_entry.get("profit_loss", ""))
+        try:
+            profit_loss_value = float(profit_loss_cleaned)
+            trade_entry["profit_loss"] = profit_loss_cleaned
+            if profit_loss_value > 0.5:
+                trade_entry["trade_outcome"] = "Win"
+            elif abs(profit_loss_value) < 0.5:
+                trade_entry["trade_outcome"] = "Break Even"
+            else:
+                trade_entry["trade_outcome"] = "Loss"
+        except ValueError:
+            return None
 
-        return parsed_data
+        trade_entry["filename"] = os.path.basename(file_path)
 
     except Exception as e:
-        print(f"Error parsing file {file_path}: {e}")
-        return {}
+        print(f"Error parsing file '{file_path}': {e}")
+        return None
+
+    return trade_entry
+
 
 def determine_killzone(opened_time):
     """
-    Determine the killzone for a given opened time.
+    Determine the killzone for the given opened time.
     """
     try:
-        rome_tz = timezone('Europe/Rome')
-        ny_tz = timezone('America/New_York')
-        opened_time = datetime.strptime(opened_time, "%d/%m/%Y %H:%M").astimezone(ny_tz)
-        hour, minute = opened_time.hour, opened_time.minute
+        rome_tz = pytz.timezone("Europe/Rome")
+        opened_time = datetime.strptime(opened_time, "%d/%m/%Y %H:%M").astimezone(rome_tz)
+        hour = opened_time.hour
 
-        killzones = {
-            'London': (2, 5),
-            'New York': (7, 10)
-        }
-        for zone, (start_hour, end_hour) in killzones.items():
-            if start_hour <= hour < end_hour or (hour == end_hour and minute <= 15):
-                return zone
-        return None
+        if 2 <= hour < 5:
+            return "London"
+        elif 7 <= hour < 10:
+            return "New York"
+        return "Other"
     except Exception as e:
         print(f"Error determining killzone: {e}")
-        return None
+        return "Unknown"
 
-def extract_open_month(opened_time):
+# GUI and file import logic
+def import_trades():
     """
-    Extract and format the open month from the opened time string.
+    Main function to handle trade import with GUI for account and folder selection.
     """
     try:
-        opened_datetime = datetime.strptime(opened_time, "%d/%m/%Y %H:%M")
-        return opened_datetime.strftime("%B")  # Format as "Month Year"
-    except ValueError as e:
-        print(f"Error extracting open month: {e}")
-        return "Unknown"  # Default value if parsing fails
+        root = Tk()
+        root.withdraw()
 
+        accounts = DatabaseManager.get_accounts()
+        if not accounts:
+            messagebox.showerror("Error", "No accounts found. Please create an account first.")
+            return
 
+        account_names = [f"{account[1]} ({account[0]})" for account in accounts]
+        account_selection = simpledialog.askstring(
+            "Select Account", "\n".join(account_names) + "\n\nEnter Account ID:"
+        )
+        if account_selection not in [account[0] for account in accounts]:
+            messagebox.showerror("Error", "Invalid account selection.")
+            return
 
-def process_and_store_markdown(directory):
-    """
-    Process markdown files, parse them, and store them in the database.
-    """
-    DatabaseManager.setup_database()  # Ensure the database is ready
+        folder_path = filedialog.askdirectory(title="Select Folder Containing Trades")
+        if not folder_path:
+            messagebox.showerror("Error", "No folder selected.")
+            return
 
-    for file_name in os.listdir(directory):
-        if file_name.endswith('.md'):
-            file_path = os.path.join(directory, file_name)
-            parsed_data = parse_general_markdown(file_path)
+        account_name = next(account[1] for account in accounts if account[0] == account_selection)
+        account_folder = os.path.join(BACKUP_DIR, account_name)
+        os.makedirs(account_folder, exist_ok=True)
 
-            if parsed_data:
-                # Create a TradeEntry instance and store it
-                entry = TradeEntry(
-                    filename=file_name,
-                    position_size=parsed_data.get('position_size'),
-                    opened=parsed_data.get('opened'),
-                    closed=parsed_data.get('closed'),
-                    pips_gained_lost=parsed_data.get('pips_gained_lost'),
-                    profit_loss=parsed_data.get('profit_loss'),
-                    risk_reward=parsed_data.get('risk_reward'),
-                    strategy_used=parsed_data.get('strategy_used'),
-                    open_day=parsed_data.get('open_day'),
-                    open_time=parsed_data.get('open_time'),
-                    trade_outcome=parsed_data.get('trade_outcome'),
-                    open_month=parsed_data.get('open_month'),  # Add month
-                    trade_duration_minutes=parsed_data.get('trade_duration_minutes'),  # Duration
-                    killzone=parsed_data.get('killzone')  # Killzone
-                )
-                DatabaseManager.insert_trade(entry)
+        for file_name in os.listdir(folder_path):
+            if file_name.endswith(".md"):
+                file_path = os.path.join(folder_path, file_name)
+                trade_entry = parse_markdown_file(file_path)
+                if trade_entry:
+                    DatabaseManager.insert_trade(trade_entry, account_selection)
+                    shutil.copy(file_path, account_folder)
+                else:
+                    print(f"Skipped '{file_name}' due to errors during parsing.")
 
+        messagebox.showinfo("Success", "Trades imported successfully.")
+
+    except Exception as e:
+        messagebox.showerror("Error", f"An error occurred: {e}")
 
 if __name__ == "__main__":
-    process_and_store_markdown("trade_logs")
+    import_trades()
