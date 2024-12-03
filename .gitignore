@@ -1,5 +1,6 @@
 # Personal trades
-app/data/*
+app/data/backups/*
+app/data/trades.db
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
