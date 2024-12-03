@@ -26,13 +26,13 @@ pip install -r requirements.txt
    - Use `markdown_parser.py` to process and import markdown files into the database.
 
 4. **Launch the App**:
-   - Start the backend API using `app.py`:
+   - Start the backend API and Dashboard:
      ```bash
-     python app.py
+     python launcher.py
      ```
-   - Then, run `dashboard.py` to launch the interactive web dashboard:
+   - Go to the interactive web dashboard:
      ```bash
-     python dashboard.py
+     http://127.0.0.1:8050/
      ```
 
 ## What It Can Be Used For
