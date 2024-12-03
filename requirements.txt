@@ -1,0 +1,8 @@
+flask~=3.0.3
+dash~=2.18.2
+dash-bootstrap-components~=1.6.1rc2
+requests~=2.32.3
+pandas~=2.2.2
+plotly~=5.23.0
+pytz~=2024.1
+datetime~=5.5
