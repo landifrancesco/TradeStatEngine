@@ -6,6 +6,7 @@ import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 
+
 # Initialize Dash app
 external_stylesheets = [dbc.themes.DARKLY]
 app = dash.Dash(__name__, external_stylesheets=external_stylesheets, title="TradeStatsEngine")
@@ -88,10 +89,8 @@ app.layout = dbc.Container([
         dbc.Col(dcc.Graph(id="profit-by-killzone", config={"displayModeBar": True}), width=6)
     ], className="mb-4"),
     dbc.Row([
-        dbc.Col(dcc.Graph(id="reward-ratios", config={"displayModeBar": True}), width=12),
-    ], className="mb-4"),
-    dbc.Row([
-        dbc.Col(dcc.Graph(id="heatmap", config={"displayModeBar": True}), width=12)
+        dbc.Col(dcc.Graph(id="reward-ratios", config={"displayModeBar": True}), width=6),
+        dbc.Col(dcc.Graph(id="heatmap", config={"displayModeBar": True}), width=6)
     ], className="mb-4"),
     dbc.Row([
         dbc.Col(
@@ -227,7 +226,7 @@ def update_dashboard(selected_account):
             color="Outcome",
             title="Daily Performance",
             template="plotly_dark",
-            color_discrete_sequence=['#00BC8C', '#E74C3C', '#F39C12'],  # Custom palette
+            color_discrete_sequence=['#E74C3C', '#F39C12', '#00BC8C'],  # Custom palette
             barmode="group"
         )
     else:
@@ -260,23 +259,81 @@ def update_dashboard(selected_account):
             template="plotly_dark"
         )
 
+    # Killzone Performance
+    killzone_list = []
+    for killzone, days in killzone_performance.items():
+        for day, count in days.items():
+            killzone_list.append({"Killzone": killzone, "Day": day, "Count": count})
+
+    killzone_df = pd.DataFrame(killzone_list)
+    if not killzone_df.empty:
+        day_order = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+        killzone_df['Day'] = pd.Categorical(killzone_df['Day'], categories=day_order, ordered=True)
+        killzone_df = killzone_df.sort_values(['Killzone', 'Day'])
+
+        killzone_fig = px.bar(
+            killzone_df,
+            x="Killzone",
+            y="Count",
+            color="Day",
+            title="Killzone Performance by Day",
+            labels={"Count": "Trade Count", "Killzone": "Killzone"},
+            template="plotly_dark",
+            barmode="group",
+            color_discrete_sequence=['#636EFA', '#EF553B', '#00CC96', '#AB63FA', '#FFA15A', '#19D3F3', '#FF6692']
+        )
+    else:
+        killzone_fig = go.Figure().update_layout(
+            title="Killzone Performance by Day (No Data)",
+            template="plotly_dark"
+        )
+
     # Heatmap
     duration_df = pd.DataFrame(duration_data)
     if not duration_df.empty:
+        # Define the bins and labels based on duration
+        bin_edges = pd.cut(duration_df['duration'], bins=10, retbins=True)[1]
+
+        # Function to format the bin labels as ranges
+        def format_range(start, end):
+            return f"{int(start)}-{int(end)}"
+
+        # Create labels for the bins using the bin edges
+        bin_labels = [
+            format_range(bin_edges[i], bin_edges[i + 1])
+            for i in range(len(bin_edges) - 1)
+        ]
+
+        # Assign the new labels to the 'Duration Range' column
         duration_df['Duration Range'] = pd.cut(
             duration_df['duration'],
-            bins=10,
-            labels=[f"Range {i}" for i in range(1, 11)]
+            bins=bin_edges,
+            labels=bin_labels
         )
-        heatmap_data = duration_df.groupby(['Duration Range', 'outcome'], observed=True).size().reset_index(name='Count')
+
+        # Optional: Include a legend in the visualization
+        heatmap_data = duration_df.groupby(['Duration Range', 'outcome']).size().reset_index(name='Count')
         heatmap_pivot = heatmap_data.pivot(index='outcome', columns='Duration Range', values='Count').fillna(0)
+
         heatmap_fig = px.imshow(
             heatmap_pivot,
             title="Heatmap of Trade Outcomes vs. Duration",
-            labels={"x": "Duration Ranges", "y": "Trade Outcome", "color": "Frequency"},
+            labels={
+                "x": "Duration Range (in minutes)",
+                "y": "Trade Outcome",
+                "color": "Frequency"
+            },
             template="plotly_dark",
             color_continuous_scale='Cividis'
         )
+
+        # Add range descriptions to the title or as a legend
+        heatmap_fig.update_layout(
+            xaxis_title="Duration Ranges (Minutes)",
+            yaxis_title="Trade Outcome",
+            font=dict(size=12)
+        )
+
     else:
         heatmap_fig = go.Figure().update_layout(
             title="Heatmap of Trade Outcomes vs. Duration (No Data)",
@@ -286,16 +343,30 @@ def update_dashboard(selected_account):
     # Reward Ratios
     reward_ratios_df = pd.DataFrame(reward_ratios_data)
     if not reward_ratios_df.empty:
-        reward_ratios_fig = px.violin(
+        reward_ratios_fig = px.box(
             reward_ratios_df,
-            x="reward_ratio",
-            y="outcome",
+            x="outcome",
+            y="reward_ratio",
             color="outcome",
             title="Reward Ratios by Trade Outcome",
             template="plotly_dark",
-            box=True,
-            points=False
+            labels={
+                "outcome": "Trade Outcome",
+                "reward_ratio": "Reward Ratio"
+            },
+            color_discrete_sequence=['#E74C3C', '#F39C12', '#00BC8C'],  # Custom palette for colors
+            points="all"  # Show all data points for better clarity
         )
+
+        # Update layout for better visuals
+        reward_ratios_fig.update_layout(
+            xaxis_title="Trade Outcome",
+            yaxis_title="Reward Ratio",
+            showlegend=False,  # Hide the legend since color already represents the outcome
+            boxmode="group",  # Group boxes if categories increase
+            font=dict(size=12)  # Adjust font size for better readability
+        )
+
     else:
         reward_ratios_fig = go.Figure().update_layout(
             title="Reward Ratios by Trade Outcome (No Data)",
@@ -324,7 +395,7 @@ def update_dashboard(selected_account):
         equity_curve_fig,
         monthly_performance_fig,
         daily_performance_fig,
-        killzone_outcomes_fig,
+        killzone_fig,
         killzone_outcomes_fig,
         reward_ratios_fig,
         heatmap_fig,
@@ -333,5 +404,5 @@ def update_dashboard(selected_account):
     )
 
 if __name__ == "__main__":
-    app.run_server(debug=True)
+    app.run_server(debug=False)
 

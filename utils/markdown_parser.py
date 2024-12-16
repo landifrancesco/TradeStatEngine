@@ -216,6 +216,7 @@ def import_trades():
                     print(f"Skipped '{file_name}' due to errors during parsing.")
 
         messagebox.showinfo("Success", "Trades imported successfully.")
+        exit()
 
     except Exception as e:
         messagebox.showerror("Error", f"An error occurred: {e}")

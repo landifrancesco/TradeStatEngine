@@ -320,4 +320,4 @@ if __name__ == '__main__':
     os.makedirs(DATA_DIR, exist_ok=True)
 
     # Start the Flask application
-    app.run()
+    app.run(debug=False)
