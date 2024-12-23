@@ -3,7 +3,8 @@ class TradeEntry:
                  opened_raw=None, closed_raw=None, pips_gained_lost=None,
                  profit_loss=None, risk_reward=None, strategy_used=None,
                  open_day=None, open_time=None, trade_outcome=None,
-                 trade_duration_minutes=None, killzone=None, open_month=None):
+                 trade_duration_minutes=None, killzone=None, open_month=None,
+                 time_writing=None):
         self.filename = filename
         self.position_size = position_size
         self.opened = opened
@@ -20,6 +21,7 @@ class TradeEntry:
         self.trade_duration_minutes = trade_duration_minutes
         self.killzone = killzone
         self.open_month = open_month
+        self.time_writing = time_writing
 
     def to_dict(self):
         """
@@ -37,7 +39,8 @@ class TradeEntry:
             'open_day': self.open_day,
             'open_time': self.open_time,
             'trade_outcome': self.trade_outcome,
-            'open_month': self.open_month,  # Add month
-            'trade_duration_minutes': self.trade_duration_minutes,  # Add duration
-            'killzone': self.killzone,  # Add Killzone
+            'open_month': self.open_month,
+            'trade_duration_minutes': self.trade_duration_minutes,
+            'killzone': self.killzone,
+            'time_writing': self.time_writing
         }

@@ -46,7 +46,8 @@ class DatabaseManager:
                     trade_outcome TEXT,
                     open_month TEXT,
                     trade_duration_minutes REAL,
-                    killzone TEXT
+                    killzone TEXT,
+                    time_writing TEXT
                 )
             """)
 
