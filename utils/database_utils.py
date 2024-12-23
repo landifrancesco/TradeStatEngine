@@ -143,6 +143,35 @@ class DatabaseManager:
         print(f"Account ID: {account_id} | Name: {account_name} | Type: {account_type}")
 
     @staticmethod
+    def view_accounts():
+        """
+        Display all accounts along with the count of trades linked to each account.
+        """
+        try:
+            conn = sqlite3.connect(DB_NAME)
+            cursor = conn.cursor()
+            cursor.execute("""
+                SELECT a.id, a.name, a.type, COUNT(t.id) AS trade_count
+                FROM accounts a
+                LEFT JOIN trades t ON a.id = t.account_id
+                GROUP BY a.id, a.name, a.type
+                ORDER BY a.id;
+            """)
+            accounts = cursor.fetchall()
+            conn.close()
+
+            if accounts:
+                print("\nAccounts:")
+                print(f"{'ID':<5} {'Name':<20} {'Type':<10} {'Trade Count':<12}")
+                print("-" * 50)
+                for account in accounts:
+                    print(f"{account[0]:<5} {account[1]:<20} {account[2]:<10} {account[3]:<12}")
+            else:
+                print("\nNo account found in the database.")
+        except Exception as e:
+            print(f"Error fetching accounts with trade counts: {e}")
+
+    @staticmethod
     def get_all_accounts():
         """
         Fetch all accounts from the database.
@@ -240,9 +269,10 @@ if __name__ == "__main__":
         print("1. Setup Database")
         print("2. Reset Database")
         print("3. Add account")
-        print("4. View all entries")
-        print("5. Delete trade")
-        print("6. Exit")
+        print("4. View accounts")
+        print("5. View all entries")
+        print("6. Delete trade")
+        print("7. Exit")
 
         choice = input("\nEnter your choice: ")
 
@@ -255,6 +285,8 @@ if __name__ == "__main__":
         elif choice == "3":
             DatabaseManager.insert_account()
         elif choice == "4":
+            DatabaseManager.view_accounts()
+        elif choice == "5":
             accounts = DatabaseManager.get_all_accounts()
             # Display available accounts
             print("\nAvailable Accounts:")
@@ -268,11 +300,15 @@ if __name__ == "__main__":
                     print(entry)
             else:
                 print("\nNo entries found for this account.")
-        elif choice == "5":
+        elif choice == "6":
+            accounts = DatabaseManager.get_all_accounts()
+            print("\nAvailable Accounts:")
+            for account in accounts:
+                print(f"ID: {account[0]}, Name: {account[1]}, Type: {account[2]}")
             account_id = input("Enter the account ID: ")
             entry_id = input("Enter the entry ID to delete: ")
             DatabaseManager.delete_entry_by_id(account_id, int(entry_id))
-        elif choice == "6":
+        elif choice == "7":
             print("If you like this script you may consider offering me a coffee :D")
             print("Send BEP20, ERC20, BTC, BCH, CRO, LTC, DASH, CELO, ZEC, XRP to:")
             print(Fore.GREEN, "landifrancesco.wallet", Style.RESET_ALL)

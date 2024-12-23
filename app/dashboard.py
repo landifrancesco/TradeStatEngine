@@ -26,6 +26,12 @@ def fetch_data(endpoint, params=None):
 
 # Fetch the list of accounts for the dropdown
 accounts = fetch_data('/accounts')
+
+# Safeguard in case accounts are not fetched
+if not accounts:
+    print("No accounts fetched from backend. Please ensure the backend is running and accessible.")
+    accounts = [{"id": 0, "name": "No Accounts Available"}]
+
 account_options = [{"label": account["name"], "value": account["id"]} for account in accounts]
 
 # Layout with Dropdown for Account Selection
@@ -37,18 +43,17 @@ app.layout = dbc.Container([
                 html.H4("Select Account", className="text-center"),
                 dbc.Select(
                     id="account-dropdown",
-                    options=[{"label": acc["name"], "value": acc["id"]} for acc in accounts],
-                    value=accounts[0]["id"],  # Default value (first account)
+                    options=account_options,
+                    value=accounts[0]["id"] if accounts else None,  # Avoid IndexError if empty
                     className="mb-4",
                     style={
-                        "backgroundColor": "#333",  # Matches the dark theme
-                        "color": "#fff",  # White text for better contrast
-                        "fontSize": "16px",  # Larger font size
-                        "width": "50%",  # Wider dropdown
-                        "margin": "0 auto",  # Center the dropdown
+                        "backgroundColor": "#333",
+                        "color": "#fff",
+                        "fontSize": "16px",
+                        "width": "50%",
+                        "margin": "0 auto",
                     },
                 )
-
             ]),
             width=4,
             className="offset-4",

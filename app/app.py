@@ -180,7 +180,6 @@ def performance_killzone():
     ORDER BY killzone, open_day
     """
     rows = query_database(query, params=(account_id,))
-    print(f"Killzone Query Results: {rows}")  # Debugging statement
 
     performance = {}
     for row in rows:
@@ -189,7 +188,6 @@ def performance_killzone():
             performance[killzone] = {}
         performance[killzone][day] = count
 
-    print(f"Killzone Performance Output: {performance}")  # Debugging statement
     return jsonify(performance)
 
 

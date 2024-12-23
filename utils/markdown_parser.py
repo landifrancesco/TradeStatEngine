@@ -17,6 +17,26 @@ DB_NAME = os.path.join(DATA_DIR, "trades.db")
 BACKUP_DIR = os.path.join(DATA_DIR, "backups")
 os.makedirs(BACKUP_DIR, exist_ok=True)  # Ensure the backups directory exists
 
+
+# Helper function to clean markdown formatting
+def clean_markdown_text(text):
+    """
+    Remove markdown formatting like bold, italic, and surrounding symbols.
+    """
+    if not text:
+        return ""
+
+    # Remove **bold**, *italic*, __bold__, _italic_
+    text = re.sub(r'(\*\*|__)(.*?)\1', r'\2', text)  # Remove bold
+    text = re.sub(r'(\*|_)(.*?)\1', r'\2', text)  # Remove italic
+
+    # Remove stray asterisks or underscores
+    text = re.sub(r'[*_]', '', text)
+
+    # Strip extra whitespace
+    return text.strip()
+
+
 class DatabaseManager:
     @staticmethod
     def get_accounts():
@@ -76,6 +96,7 @@ class DatabaseManager:
         except Exception as e:
             print(f"Error inserting trade: {e}")
 
+
 def parse_markdown_file(file_path):
     """
     Parse a markdown file to extract trade details.
@@ -100,7 +121,7 @@ def parse_markdown_file(file_path):
         for key, pattern in fields.items():
             match = re.search(pattern, content, re.IGNORECASE)
             if match:
-                trade_entry[key] = match.group(1).strip()
+                trade_entry[key] = clean_markdown_text(match.group(1).strip())
 
         # Skip trades marked as missed or with missing profit_loss
         if not trade_entry.get("profit_loss") or trade_entry["profit_loss"].strip() == "#":
@@ -108,15 +129,8 @@ def parse_markdown_file(file_path):
             return None
 
         # Parse and clean 'opened' and 'closed' fields
-        raw_opened = trade_entry.get("opened", "").strip().lstrip("*")
-        raw_closed = trade_entry.get("closed", "").strip().lstrip("*")
-
-        def clean_date(date_str):
-            """Clean the date string by stripping unnecessary characters."""
-            return date_str.replace("*", "").strip()
-
-        raw_opened = clean_date(raw_opened)
-        raw_closed = clean_date(raw_closed)
+        raw_opened = clean_markdown_text(trade_entry.get("opened", ""))
+        raw_closed = clean_markdown_text(trade_entry.get("closed", ""))
 
         if raw_opened and raw_closed:
             try:
@@ -128,7 +142,7 @@ def parse_markdown_file(file_path):
                 trade_entry["open_month"] = opened_time.strftime("%B")
             except ValueError as e:
                 print(f"Error parsing dates in file '{file_path}': {e}")
-                return None  # Skip trade if date parsing fails
+                return None
 
         # Determine killzone
         trade_entry["killzone"] = determine_killzone(raw_opened)
@@ -162,7 +176,7 @@ def determine_killzone(opened_time):
     """
     try:
         rome_tz = pytz.timezone("Europe/Rome")
-        opened_time = datetime.strptime(opened_time, "%d/%m/%Y %H:%M").astimezone(rome_tz)
+        opened_time = datetime.strptime(clean_markdown_text(opened_time), "%d/%m/%Y %H:%M").astimezone(rome_tz)
         hour = opened_time.hour
 
         if 2 <= hour < 5:
@@ -173,6 +187,7 @@ def determine_killzone(opened_time):
     except Exception as e:
         print(f"Error determining killzone: {e}")
         return "Unknown"
+
 
 # GUI and file import logic
 def import_trades():
@@ -192,8 +207,15 @@ def import_trades():
         account_selection = simpledialog.askstring(
             "Select Account", "\n".join(account_names) + "\n\nEnter Account ID:"
         )
-        if account_selection not in [account[0] for account in accounts]:
-            messagebox.showerror("Error", "Invalid account selection.")
+        # Validate the account selection
+        try:
+            account_selection = int(account_selection)  # Ensure it's an integer
+            valid_account_ids = [account[0] for account in accounts]  # IDs from the database
+            if account_selection not in valid_account_ids:
+                messagebox.showerror("Error", "Invalid account selection. Please enter a valid Account ID.")
+                return
+        except (ValueError, TypeError):
+            messagebox.showerror("Error", "Invalid input. Please enter a numeric Account ID.")
             return
 
         folder_path = filedialog.askdirectory(title="Select Folder Containing Trades")
