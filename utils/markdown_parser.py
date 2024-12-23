@@ -88,7 +88,7 @@ class DatabaseManager:
 # Parse Markdown File
 def parse_markdown_file(file_path):
     """
-    Parse a markdown file to extract trade details, including Time Writing and essential metadata.
+    Parse a markdown file to extract trade details.
     """
     trade_entry = {}
     try:
@@ -110,6 +110,11 @@ def parse_markdown_file(file_path):
             match = re.search(pattern, content, re.IGNORECASE)
             if match:
                 trade_entry[key] = clean_markdown_text(match.group(1).strip())
+
+        # Check for missed trades
+        if trade_entry.get("profit_loss") == "#" or not trade_entry.get("profit_loss"):
+            print(f"Skipping trade in '{file_path}' due to invalid or missing Profit/Loss.")
+            return None
 
         # Ensure Time Writing exists
         if not trade_entry.get("time_writing"):
@@ -161,6 +166,7 @@ def parse_markdown_file(file_path):
         return None
 
     return trade_entry
+
 
 def determine_killzone(opened_time):
     try:
