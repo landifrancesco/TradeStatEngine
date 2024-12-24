@@ -1,6 +1,13 @@
+from datetime import datetime
 from flask import Flask, jsonify, request
 import sqlite3
 import os
+import sys
+
+# Redirect stdout and stderr to null (no output)
+sys.stdout = open(os.devnull, 'w')
+sys.stderr = open(os.devnull, 'w')
+
 
 app = Flask(__name__)
 
@@ -108,24 +115,41 @@ def duration_heatmap():
     duration_data = [{"outcome": row[0], "duration": row[1]} for row in rows]
     return jsonify(duration_data)
 
+
 @app.route('/stats/monthly', methods=['GET'])
 def monthly_performance():
-    """
-    Endpoint to provide monthly performance, filtered by account_id.
-    """
-    account_id = request.args.get('account_id',1)
+    account_id = request.args.get('account_id')
+    time_writing_mode = request.args.get('time_writing_toggle', 'false').lower() == 'true'
+
     query = """
-    SELECT 
-        open_month,
-        SUM(CAST(profit_loss AS FLOAT)) AS total_profit
-    FROM trades
-    WHERE profit_loss != '#' AND account_id = ?
-    GROUP BY open_month
-    ORDER BY datetime(substr(open_month, 4, 4) || '-' || substr(open_month, 1, 2) || '-01')
+        SELECT time_writing, opened, profit_loss
+        FROM trades
+        WHERE account_id = ?
     """
-    rows = query_database(query, params=(account_id,))
-    monthly_profit = {row[0]: row[1] for row in rows}
-    return jsonify(monthly_profit)
+    rows = query_database(query, (account_id,))
+
+    monthly_data = {}
+
+    for time_writing, opened, profit_loss in rows:
+        try:
+            if time_writing_mode and time_writing:
+                time_obj = datetime.strptime(time_writing.strip(), "%H:%M %d/%m/%Y")
+                month_key = time_obj.strftime("%Y-%m")
+            elif opened:
+                time_obj = datetime.strptime(opened.strip(), "%d/%m/%Y %H:%M")
+                month_key = time_obj.strftime("%Y-%m")
+            else:
+                continue
+
+            profit_loss_value = float(profit_loss) if profit_loss else 0.0
+            monthly_data[month_key] = monthly_data.get(month_key, 0.0) + profit_loss_value
+
+        except ValueError as e:
+            continue
+
+    return jsonify(monthly_data)
+
+
 
 @app.route('/stats/daily', methods=['GET'])
 def daily_performance():
@@ -167,7 +191,6 @@ def performance_killzone():
     Endpoint to provide killzone data grouped by day, filtered by account_id.
     """
     account_id = request.args.get('account_id',1)
-    print(f"Received account_id: {account_id}")  # Debugging statement
 
     query = """
     SELECT
@@ -180,7 +203,6 @@ def performance_killzone():
     ORDER BY killzone, open_day
     """
     rows = query_database(query, params=(account_id,))
-    print(f"Killzone Query Results: {rows}")  # Debugging statement
 
     performance = {}
     for row in rows:
@@ -189,7 +211,6 @@ def performance_killzone():
             performance[killzone] = {}
         performance[killzone][day] = count
 
-    print(f"Killzone Performance Output: {performance}")  # Debugging statement
     return jsonify(performance)
 
 

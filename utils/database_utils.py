@@ -1,5 +1,6 @@
 import sqlite3
 import os
+from colorama import Fore, Style
 
 # Define the base directory for the app
 BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "app"))  # Moves one level up to 'app'
@@ -23,9 +24,6 @@ class DatabaseManager:
             data_dir = os.path.join(BASE_DIR, 'data')
             os.makedirs(data_dir, exist_ok=True)
 
-            # Debugging: Print the resolved database path
-            print(f"Resolved database path: {DB_NAME}")
-
             # Connect to the database and create tables
             conn = sqlite3.connect(DB_NAME)
             cursor = conn.cursor()
@@ -48,17 +46,18 @@ class DatabaseManager:
                     trade_outcome TEXT,
                     open_month TEXT,
                     trade_duration_minutes REAL,
-                    killzone TEXT
+                    killzone TEXT,
+                    time_writing TEXT
                 )
             """)
 
             # Create accounts table
             cursor.execute("""
                 CREATE TABLE IF NOT EXISTS accounts (
-                    id TEXT PRIMARY KEY,
-                    name TEXT NOT NULL,
-                    description TEXT
-                )
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,  -- Auto-increment ID
+                    name TEXT NOT NULL,                    -- Name of the account
+                    type TEXT CHECK(type IN ('Real', 'Paper')) NOT NULL  -- Type (Real or Paper)
+                );
             """)
 
             conn.commit()
@@ -92,6 +91,102 @@ class DatabaseManager:
             print(f"Error resetting the database: {e}")
         finally:
             conn.close()
+
+    @staticmethod
+    def create_account(name, account_type):
+        """
+        Create a new account with a name and type (Real or Paper).
+        """
+        try:
+            conn = sqlite3.connect(DB_NAME)
+            cursor = conn.cursor()
+            cursor.execute("INSERT INTO accounts (name, type) VALUES (?, ?)", (name, account_type))
+            conn.commit()
+            conn.close()
+            print(f"Account '{name}' ({account_type}) created successfully.")
+        except Exception as e:
+            print(f"Error creating account: {e}")
+
+    @staticmethod
+    def get_next_account_id():
+        """
+        Get the next account ID (incremental).
+        """
+        try:
+            conn = sqlite3.connect(DB_NAME)
+            cursor = conn.cursor()
+            cursor.execute("SELECT MAX(id) FROM accounts")
+            result = cursor.fetchone()[0]
+            conn.close()
+            return 1 if result is None else result + 1
+        except Exception as e:
+            print(f"Error fetching next account ID: {e}")
+            return 1
+
+    @staticmethod
+    def insert_account():
+        print("\nCreate a New Account")
+        print("1. Real Account")
+        print("2. Paper Account")
+        choice = input("Choose account type (1 or 2): ")
+
+        account_type = "Real" if choice == "1" else "Paper" if choice == "2" else None
+        if not account_type:
+            print("Invalid choice. Please select 1 (Real) or 2 (Paper).")
+            return
+
+        account_id = DatabaseManager.get_next_account_id()
+        account_name = input(f"Enter a name for the {account_type} account: ")
+        full_name = f"{account_name} - {account_type}"  # Combine name with type
+
+        # Save account to database
+        DatabaseManager.create_account(full_name, account_type)
+        print(f"Account ID: {account_id} | Name: {account_name} | Type: {account_type}")
+
+    @staticmethod
+    def view_accounts():
+        """
+        Display all accounts along with the count of trades linked to each account.
+        """
+        try:
+            conn = sqlite3.connect(DB_NAME)
+            cursor = conn.cursor()
+            cursor.execute("""
+                SELECT a.id, a.name, a.type, COUNT(t.id) AS trade_count
+                FROM accounts a
+                LEFT JOIN trades t ON a.id = t.account_id
+                GROUP BY a.id, a.name, a.type
+                ORDER BY a.id;
+            """)
+            accounts = cursor.fetchall()
+            conn.close()
+
+            if accounts:
+                print("\nAccounts:")
+                print(f"{'ID':<5} {'Name':<20} {'Type':<10} {'Trade Count':<12}")
+                print("-" * 50)
+                for account in accounts:
+                    print(f"{account[0]:<5} {account[1]:<20} {account[2]:<10} {account[3]:<12}")
+            else:
+                print("\nNo account found in the database.")
+        except Exception as e:
+            print(f"Error fetching accounts with trade counts: {e}")
+
+    @staticmethod
+    def get_all_accounts():
+        """
+        Fetch all accounts from the database.
+        """
+        try:
+            conn = sqlite3.connect(DB_NAME)
+            cursor = conn.cursor()
+            cursor.execute("SELECT id, name, type FROM accounts")
+            accounts = cursor.fetchall()
+            conn.close()
+            return accounts
+        except Exception as e:
+            print(f"Error fetching accounts: {e}")
+            return []
 
     @staticmethod
     def insert_trade(trade_entry):
@@ -138,50 +233,19 @@ class DatabaseManager:
             print(f"Error inserting trade '{trade_entry.filename}': {e}")
 
     @staticmethod
-    def insert_account(account_id, name, description):
+    def view_all_entries(account_id):
         """
-        Insert a new account into the database.
-        """
-        try:
-            conn = sqlite3.connect(DB_NAME)
-            cursor = conn.cursor()
-
-            sql = "INSERT INTO accounts (id, name, description) VALUES (?, ?, ?)"
-            values = (account_id, name, description)
-
-            cursor.execute(sql, values)
-            conn.commit()
-            conn.close()
-            print(f"Account '{name}' inserted into the database.")
-        except sqlite3.IntegrityError:
-            print(f"Account '{name}' already exists in the database.")
-        except Exception as e:
-            print(f"Error inserting account '{name}': {e}")
-
-    @staticmethod
-    def view_all_entries(account_id, order_by_date=True):
-        """
-        Retrieve all entries for a specific account.
+        Fetch all trade entries for a given account ID.
         """
         try:
             conn = sqlite3.connect(DB_NAME)
             cursor = conn.cursor()
-
-            if order_by_date:
-                query = """
-                    SELECT * FROM trades
-                    WHERE account_id = ?
-                    ORDER BY datetime(substr(opened, 7, 4) || '-' || substr(opened, 4, 2) || '-' || substr(opened, 1, 2) || 'T' || substr(opened, 12))
-                """
-            else:
-                query = "SELECT * FROM trades WHERE account_id = ?"
-
-            cursor.execute(query, (account_id,))
-            rows = cursor.fetchall()
+            cursor.execute("SELECT * FROM trades WHERE account_id = ?", (account_id,))
+            entries = cursor.fetchall()
             conn.close()
-            return rows
+            return entries
         except Exception as e:
-            print(f"Error retrieving entries: {e}")
+            print(f"Error fetching entries: {e}")
             return []
 
     @staticmethod
@@ -205,10 +269,11 @@ if __name__ == "__main__":
         print("\nDatabase Utility:")
         print("1. Setup Database")
         print("2. Reset Database")
-        print("3. View All Entries for Account")
-        print("4. Delete Entry by ID")
-        print("5. Add Account")
-        print("6. Exit")
+        print("3. Add account")
+        print("4. View accounts")
+        print("5. View all entries")
+        print("6. Delete trade")
+        print("7. Exit")
 
         choice = input("\nEnter your choice: ")
 
@@ -219,6 +284,15 @@ if __name__ == "__main__":
             if confirm.lower() == "yes":
                 DatabaseManager.reset_database()
         elif choice == "3":
+            DatabaseManager.insert_account()
+        elif choice == "4":
+            DatabaseManager.view_accounts()
+        elif choice == "5":
+            accounts = DatabaseManager.get_all_accounts()
+            # Display available accounts
+            print("\nAvailable Accounts:")
+            for account in accounts:
+                print(f"ID: {account[0]}, Name: {account[1]}, Type: {account[2]}")
             account_id = input("Enter the account ID: ")
             entries = DatabaseManager.view_all_entries(account_id)
             if entries:
@@ -227,17 +301,18 @@ if __name__ == "__main__":
                     print(entry)
             else:
                 print("\nNo entries found for this account.")
-        elif choice == "4":
+        elif choice == "6":
+            accounts = DatabaseManager.get_all_accounts()
+            print("\nAvailable Accounts:")
+            for account in accounts:
+                print(f"ID: {account[0]}, Name: {account[1]}, Type: {account[2]}")
             account_id = input("Enter the account ID: ")
             entry_id = input("Enter the entry ID to delete: ")
             DatabaseManager.delete_entry_by_id(account_id, int(entry_id))
-        elif choice == "5":
-            account_id = input("Enter the account ID: ")
-            name = input("Enter the account name: ")
-            description = input("Enter a description: ")
-            DatabaseManager.insert_account(account_id, name, description)
-        elif choice == "6":
-            print("Exiting the utility. Goodbye!")
+        elif choice == "7":
+            print("If you like this script you may consider offering me a coffee :D")
+            print("Send BEP20, ERC20, BTC, BCH, CRO, LTC, DASH, CELO, ZEC, XRP to:")
+            print(Fore.GREEN, "landifrancesco.wallet", Style.RESET_ALL)
             break
         else:
             print("Invalid choice. Please try again.")
