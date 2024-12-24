@@ -113,7 +113,6 @@ def parse_markdown_file(file_path):
 
         # Check for missed trades
         if trade_entry.get("profit_loss") == "#" or not trade_entry.get("profit_loss"):
-            print(f"Skipping trade in '{file_path}' due to invalid or missing Profit/Loss.")
             return None
 
         # Ensure Time Writing exists

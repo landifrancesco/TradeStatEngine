@@ -89,6 +89,20 @@ app.layout = dbc.Container([
         dbc.Col(dcc.Graph(id="monthly-performance", config={"displayModeBar": True}), width=6),
         dbc.Col(dcc.Graph(id="daily-performance", config={"displayModeBar": True}), width=6)
     ], className="mb-4"),
+
+    dbc.Row([
+        dbc.Col(
+            html.Div([
+                dbc.Checkbox(
+                    id="time-writing-toggle",
+                    label="Order by Time Writing (Paper Account Only)",
+                    value=False,
+                    style={"marginTop": "10px", "fontSize": "16px", "color": "#fff"}
+                )
+            ], className="text-center"),
+            width=6
+        )
+    ], className="mb-4"),
     dbc.Row([
         dbc.Col(dcc.Graph(id="killzone-outcomes", config={"displayModeBar": True}), width=6),
         dbc.Col(dcc.Graph(id="profit-by-killzone", config={"displayModeBar": True}), width=6)
@@ -134,14 +148,17 @@ app.layout = dbc.Container([
         Output("best-trades-list", "children"),
         Output("worst-trades-list", "children"),
     ],
-    [Input("account-dropdown", "value")]
+    [
+        Input("account-dropdown", "value"),
+        Input("time-writing-toggle", "value")
+    ]
 )
-def update_dashboard(selected_account):
-    # Fetch data for the selected account
+def update_dashboard(selected_account, time_writing_toggle):
+    # Fetch data
     summary = fetch_data(f"/stats/summary?account_id={selected_account}") or {}
     pnl_data = fetch_data(f"/stats/pnl?account_id={selected_account}") or []
+    monthly_performance = fetch_data(f"/stats/monthly?account_id={selected_account}&time_writing_toggle={str(time_writing_toggle).lower()}") or {}
     daily_performance = fetch_data(f"/stats/daily?account_id={selected_account}") or {}
-    monthly_performance = fetch_data(f"/stats/monthly?account_id={selected_account}") or {}
     killzone_performance = fetch_data(f"/stats/killzone?account_id={selected_account}") or {}
     killzone_outcomes = fetch_data(f"/stats/killzone_outcomes?account_id={selected_account}") or {}
     reward_ratios_data = fetch_data(f"/stats/reward_ratios?account_id={selected_account}") or []
@@ -152,7 +169,6 @@ def update_dashboard(selected_account):
     total_pnl = sum([float(entry.get('profit_loss', 0)) for entry in pnl_data]) if pnl_data else 0
     total_trades = summary.get("total_trades", 0)
     win_rate = (summary.get("total_wins", 0) / total_trades) * 100 if total_trades else 0
-
 
     # Equity Curve
     pnl_df = pd.DataFrame(pnl_data) if pnl_data else pd.DataFrame()
@@ -193,12 +209,23 @@ def update_dashboard(selected_account):
 
     # Monthly Performance
     if monthly_performance:
-        monthly_performance_df = pd.DataFrame(monthly_performance.items(), columns=["Month", "PNL"])
-        month_order = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"]
-        monthly_performance_df["Month"] = pd.Categorical(monthly_performance_df["Month"], categories=month_order, ordered=True)
-        monthly_performance_df = monthly_performance_df.sort_values("Month")
+        monthly_df = pd.DataFrame(monthly_performance.items(), columns=["Month", "PNL"])
+
+        # Convert 'Month' to datetime for proper sorting
+        monthly_df["Month"] = pd.to_datetime(
+            monthly_df["Month"],
+            format="%Y-%m",
+            errors="coerce"
+        )
+
+        # Sort by the datetime Month column
+        monthly_df = monthly_df.sort_values("Month")
+
+        # Format 'Month' back to display 'December 2024'
+        monthly_df["Month"] = monthly_df["Month"].dt.strftime("%B %Y")
+
         monthly_performance_fig = px.bar(
-            monthly_performance_df,
+            monthly_df,
             x="Month",
             y="PNL",
             title="Monthly Performance",
@@ -207,10 +234,11 @@ def update_dashboard(selected_account):
             template="plotly_dark",
             color_continuous_scale='Cividis'
         )
-    else:
-        monthly_performance_fig = go.Figure().update_layout(
-            title="Monthly Performance (No Data)",
-            template="plotly_dark"
+
+        # Explicitly format x-axis for better date display
+        monthly_performance_fig.update_xaxes(
+            tickmode="array",
+            tickvals=monthly_df["Month"].unique()
         )
 
     # Daily Performance
