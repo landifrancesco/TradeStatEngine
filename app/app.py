@@ -2,6 +2,12 @@ from datetime import datetime
 from flask import Flask, jsonify, request
 import sqlite3
 import os
+import sys
+
+# Redirect stdout and stderr to null (no output)
+sys.stdout = open(os.devnull, 'w')
+sys.stderr = open(os.devnull, 'w')
+
 
 app = Flask(__name__)
 
