@@ -58,7 +58,7 @@ def summary_stats():
         COUNT(*) AS total_trades,
         SUM(CASE WHEN trade_outcome = 'Win' THEN 1 ELSE 0 END) AS total_wins,
         SUM(CASE WHEN trade_outcome = 'Loss' THEN 1 ELSE 0 END) AS total_losses,
-        SUM(CASE WHEN trade_outcome = 'Break Even' THEN 1 ELSE 0 END) AS total_break_even,
+        SUM(CASE WHEN trade_outcome = 'Break-Even' THEN 1 ELSE 0 END) AS total_break_even,
         SUM(CASE WHEN trade_outcome = 'Unknown' THEN 1 ELSE 0 END) AS total_unknowns
     FROM trades WHERE account_id = ?
     """
@@ -109,7 +109,7 @@ def duration_heatmap():
         trade_outcome,
         trade_duration_minutes
     FROM trades
-    WHERE trade_duration_minutes IS NOT NULL AND trade_outcome IN ('Win', 'Loss', 'Break Even') AND account_id = ?
+    WHERE trade_duration_minutes IS NOT NULL AND trade_outcome IN ('Win', 'Loss', 'Break-Even') AND account_id = ?
     """
     rows = query_database(query, params=(account_id,))
     duration_data = [{"outcome": row[0], "duration": row[1]} for row in rows]
@@ -181,7 +181,7 @@ def daily_performance():
                 performance[day]["wins"] += 1
             elif trade_outcome == "Loss":
                 performance[day]["losses"] += 1
-            elif trade_outcome == "Break Even":
+            elif trade_outcome == "Break-even":
                 performance[day]["break_even"] += 1
     return jsonify(performance)
 
@@ -240,7 +240,7 @@ def performance_killzone_outcomes():
             performance[killzone]["wins"] += count
         elif outcome == "Loss":
             performance[killzone]["losses"] += count
-        elif outcome == "Break Even":
+        elif outcome == "Break-even":
             performance[killzone]["break_even"] += count
     return jsonify(performance)
 

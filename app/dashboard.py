@@ -72,10 +72,10 @@ app.layout = dbc.Container([
                 width=4),
     ], className="mb-4"),
     dbc.Row([
-        dbc.Col(html.Div([html.H5("Wins", className="text-center"), html.H3(id="total-wins", className="text-success text-center")]),
+        dbc.Col(html.Div([html.H5("Win", className="text-center"), html.H3(id="total-wins", className="text-success text-center")]),
                 width=3),
         dbc.Col(
-            html.Div([html.H5("Losses", className="text-center"), html.H3(id="total-losses", className="text-danger text-center")]),
+            html.Div([html.H5("Loss", className="text-center"), html.H3(id="total-losses", className="text-danger text-center")]),
             width=3),
         dbc.Col(html.Div(
             [html.H5("Break Even", className="text-center"), html.H3(id="total-break-even", className="text-warning text-center")]),
@@ -170,13 +170,33 @@ def update_dashboard(selected_account, time_writing_toggle):
     total_trades = summary.get("total_trades", 0)
     win_rate = (summary.get("total_wins", 0) / total_trades) * 100 if total_trades else 0
 
+    # General color mapping and outcome order
+    color_mapping = {
+        "Win": "#00BC8C",  # Green
+        "Loss": "#E74C3C",  # Red
+        "Break-even": "#F39C12",  # Orange
+        "Unknown": "grey"
+    }
+    outcome_order = ['Win', 'Break-even', 'Loss']
+
+
     # Equity Curve
     pnl_df = pd.DataFrame(pnl_data) if pnl_data else pd.DataFrame()
     if not pnl_df.empty:
+
         pnl_df['trade_outcome'] = pnl_df['profit_loss'].apply(
             lambda pnl: 'Win' if pnl > 0.5 else ('Break-even' if abs(pnl) < 0.5 else 'Loss')
         )
-        pnl_df['color'] = pnl_df['trade_outcome'].map({'Win': 'green', 'Loss': 'red', 'Break-even': 'yellow', 'Unknown': 'grey'})
+
+        pnl_df['color'] = pnl_df['trade_outcome'].map(color_mapping)
+
+        # Ensure the order of trade_outcome labels
+        pnl_df['trade_outcome'] = pd.Categorical(
+            pnl_df['trade_outcome'],
+            categories=outcome_order,
+            ordered=True
+        )
+
         equity_curve_fig = go.Figure()
         equity_curve_fig.add_trace(go.Scatter(
             x=pnl_df['date'],
@@ -185,15 +205,26 @@ def update_dashboard(selected_account, time_writing_toggle):
             name='Equity Curve',
             line=dict(color='blue')
         ))
-        for outcome, color in {'Win': 'green', 'Loss': 'red', 'Break-even': 'yellow', 'Unknown': 'grey'}.items():
+
+        for outcome in outcome_order:
             filtered_df = pnl_df[pnl_df['trade_outcome'] == outcome]
-            equity_curve_fig.add_trace(go.Scatter(
-                x=filtered_df['date'],
-                y=filtered_df['cumulative_pnl'],
-                mode='markers',
-                marker=dict(color=color, size=10),
-                name=outcome
-            ))
+            if not filtered_df.empty:
+                equity_curve_fig.add_trace(go.Scatter(
+                    x=filtered_df['date'],
+                    y=filtered_df['cumulative_pnl'],
+                    mode='markers',
+                    marker=dict(color=filtered_df['color'].iloc[0], size=10),
+                    name=outcome
+                ))
+
+        equity_curve_fig.update_layout(
+            showlegend=True,
+            title="Equity Curve",
+            xaxis_title="Date",
+            yaxis_title="Cumulative P/L (€)",
+            template="plotly_dark"
+        )
+
         equity_curve_fig.update_layout(
             showlegend=True,
             title="Equity Curve",
@@ -244,22 +275,40 @@ def update_dashboard(selected_account, time_writing_toggle):
     # Daily Performance
     daily_performance_list = []
     for day, stats in daily_performance.items():
-        daily_performance_list.append({"Day": day, "Outcome": "Wins", "Count": stats.get("wins", 0)})
-        daily_performance_list.append({"Day": day, "Outcome": "Losses", "Count": stats.get("losses", 0)})
+        daily_performance_list.append({"Day": day, "Outcome": "Win", "Count": stats.get("wins", 0)})
+        daily_performance_list.append({"Day": day, "Outcome": "Loss", "Count": stats.get("losses", 0)})
         daily_performance_list.append({"Day": day, "Outcome": "Break-even", "Count": stats.get("break_even", 0)})
     daily_df = pd.DataFrame(daily_performance_list)
     if not daily_df.empty:
         day_order = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
         daily_df['Day'] = pd.Categorical(daily_df['Day'], categories=day_order, ordered=True)
         daily_df = daily_df.sort_values('Day')
-        daily_performance_fig = px.bar(
-            daily_df,
-            x="Day",
-            y="Count",
-            color="Outcome",
+
+        daily_df['color'] = daily_df['Outcome'].map(color_mapping)
+
+        # Ensure the order of Outcome labels
+        daily_df['Outcome'] = pd.Categorical(
+            daily_df['Outcome'],
+            categories=outcome_order,
+            ordered=True
+        )
+
+        daily_performance_fig = go.Figure()
+        for outcome in outcome_order:
+            outcome_df = daily_df[daily_df['Outcome'] == outcome]
+            if not outcome_df.empty:
+                daily_performance_fig.add_trace(go.Bar(
+                    x=outcome_df['Day'],
+                    y=outcome_df['Count'],
+                    name=outcome,
+                    marker=dict(color=outcome_df['color'].iloc[0])  # Apply mapped color
+                ))
+
+        daily_performance_fig.update_layout(
             title="Daily Performance",
+            xaxis_title="Day",
+            yaxis_title="Count",
             template="plotly_dark",
-            color_discrete_sequence=['#E74C3C', '#F39C12', '#00BC8C'],  # Custom palette
             barmode="group"
         )
     else:
@@ -271,20 +320,39 @@ def update_dashboard(selected_account, time_writing_toggle):
     # Killzone Outcomes
     killzone_list = []
     for killzone, outcomes in killzone_outcomes.items():
-        killzone_list.append({"Killzone": killzone, "Outcome": "Wins", "Count": outcomes["wins"]})
-        killzone_list.append({"Killzone": killzone, "Outcome": "Losses", "Count": outcomes["losses"]})
+        killzone_list.append({"Killzone": killzone, "Outcome": "Win", "Count": outcomes["wins"]})
+        killzone_list.append({"Killzone": killzone, "Outcome": "Loss", "Count": outcomes["losses"]})
         killzone_list.append({"Killzone": killzone, "Outcome": "Break-even", "Count": outcomes["break_even"]})
+
     killzone_outcomes_df = pd.DataFrame(killzone_list)
+
     if not killzone_outcomes_df.empty:
-        killzone_outcomes_fig = px.bar(
-            killzone_outcomes_df,
-            x="Killzone",
-            y="Count",
-            color="Outcome",
+        killzone_outcomes_df['color'] = killzone_outcomes_df['Outcome'].map(color_mapping)
+
+        # Ensure the order of Outcome labels
+        killzone_outcomes_df['Outcome'] = pd.Categorical(
+            killzone_outcomes_df['Outcome'],
+            categories=outcome_order,
+            ordered=True
+        )
+
+        killzone_outcomes_fig = go.Figure()
+        for outcome in outcome_order:
+            outcome_df = killzone_outcomes_df[killzone_outcomes_df['Outcome'] == outcome]
+            if not outcome_df.empty:
+                killzone_outcomes_fig.add_trace(go.Bar(
+                    x=outcome_df['Killzone'],
+                    y=outcome_df['Count'],
+                    name=outcome,
+                    marker=dict(color=outcome_df['color'].iloc[0])  # Apply mapped color
+                ))
+
+        killzone_outcomes_fig.update_layout(
             title="Trade Outcomes by Killzone",
+            xaxis_title="Killzone",
+            yaxis_title="Count",
             template="plotly_dark",
-            barmode="group",
-            color_discrete_sequence=['#00BC8C', '#E74C3C', '#F39C12']
+            barmode="group"
         )
     else:
         killzone_outcomes_fig = go.Figure().update_layout(
@@ -376,6 +444,12 @@ def update_dashboard(selected_account, time_writing_toggle):
     # Reward Ratios
     reward_ratios_df = pd.DataFrame(reward_ratios_data)
     if not reward_ratios_df.empty:
+        reward_ratios_df['outcome'] = pd.Categorical(
+            reward_ratios_df['outcome'],
+            categories=outcome_order,
+            ordered=True
+        )
+
         reward_ratios_fig = px.box(
             reward_ratios_df,
             x="outcome",
@@ -387,17 +461,16 @@ def update_dashboard(selected_account, time_writing_toggle):
                 "outcome": "Trade Outcome",
                 "reward_ratio": "Reward Ratio"
             },
-            color_discrete_sequence=['#E74C3C', '#F39C12', '#00BC8C'],  # Custom palette for colors
-            points="all"  # Show all data points for better clarity
+            color_discrete_map=color_mapping,
+            points="all"
         )
 
-        # Update layout for better visuals
         reward_ratios_fig.update_layout(
             xaxis_title="Trade Outcome",
             yaxis_title="Reward Ratio",
-            showlegend=False,  # Hide the legend since color already represents the outcome
-            boxmode="group",  # Group boxes if categories increase
-            font=dict(size=12)  # Adjust font size for better readability
+            showlegend=False,
+            boxmode="group",
+            font=dict(size=12)
         )
 
     else:

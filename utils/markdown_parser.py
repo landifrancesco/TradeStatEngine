@@ -152,7 +152,7 @@ def parse_markdown_file(file_path):
             if profit_loss_value > 0.5:
                 trade_entry["trade_outcome"] = "Win"
             elif abs(profit_loss_value) < 0.5:
-                trade_entry["trade_outcome"] = "Break Even"
+                trade_entry["trade_outcome"] = "Break-even"
             else:
                 trade_entry["trade_outcome"] = "Loss"
         except ValueError:
