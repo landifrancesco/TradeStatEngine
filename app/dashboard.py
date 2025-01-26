@@ -6,7 +6,6 @@ import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 
-
 # Initialize Dash app
 external_stylesheets = [dbc.themes.DARKLY]
 app = dash.Dash(__name__, external_stylesheets=external_stylesheets, title="TradeStatsEngine")
@@ -124,7 +123,7 @@ app.layout = dbc.Container([
                 html.Ul(id="worst-trades-list")
             ]), width=6
         )
-    ])
+    ]),
 ], fluid=True)
 
 

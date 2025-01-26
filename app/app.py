@@ -5,8 +5,8 @@ import os
 import sys
 
 # Redirect stdout and stderr to null (no output)
-sys.stdout = open(os.devnull, 'w')
-sys.stderr = open(os.devnull, 'w')
+# sys.stdout = open(os.devnull, 'w')
+# sys.stderr = open(os.devnull, 'w')
 
 
 app = Flask(__name__)
@@ -58,7 +58,7 @@ def summary_stats():
         COUNT(*) AS total_trades,
         SUM(CASE WHEN trade_outcome = 'Win' THEN 1 ELSE 0 END) AS total_wins,
         SUM(CASE WHEN trade_outcome = 'Loss' THEN 1 ELSE 0 END) AS total_losses,
-        SUM(CASE WHEN trade_outcome = 'Break-Even' THEN 1 ELSE 0 END) AS total_break_even,
+        SUM(CASE WHEN trade_outcome = 'Break-even' THEN 1 ELSE 0 END) AS total_break_even,
         SUM(CASE WHEN trade_outcome = 'Unknown' THEN 1 ELSE 0 END) AS total_unknowns
     FROM trades WHERE account_id = ?
     """
@@ -337,8 +337,5 @@ def strategy_success():
     return jsonify(strategy_stats)
 
 if __name__ == '__main__':
-    # Ensure the database directory exists
-    os.makedirs(DATA_DIR, exist_ok=True)
-
     # Start the Flask application
     app.run(debug=False)

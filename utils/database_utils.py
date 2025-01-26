@@ -2,10 +2,8 @@ import sqlite3
 import os
 from colorama import Fore, Style
 
-# Define the base directory for the app
+# Define directories and database file
 BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "app"))  # Moves one level up to 'app'
-
-# Define the path to the data directory and the database file
 DATA_DIR = os.path.join(BASE_DIR, "data")
 DB_NAME = os.path.join(DATA_DIR, "trades.db")
 

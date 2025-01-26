@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Upload Markdown File</title>
+</head>
+<body>
+    <h1>Upload Your Markdown File</h1>
+    <form action="/upload" method="POST" enctype="multipart/form-data">
+        <label for="account_id">Account ID:</label><br>
+        <input type="text" id="account_id" name="account_id" required><br><br>
+        <label for="file">Choose a Markdown file:</label><br>
+        <input type="file" id="file" name="file" accept=".md" required><br><br>
+        <button type="submit">Upload</button>
+    </form>
+</body>
+</html>

@@ -5,13 +5,13 @@ import sqlite3
 import shutil
 from datetime import datetime
 from tkinter import Tk, filedialog, simpledialog, messagebox
+from app.web_importer import UPLOAD_DIR
 
 # Define paths
 BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "app"))
 DATA_DIR = os.path.join(BASE_DIR, "data")
 DB_NAME = os.path.join(DATA_DIR, "trades.db")
-BACKUP_DIR = os.path.join(DATA_DIR, "backups")
-os.makedirs(BACKUP_DIR, exist_ok=True)
+os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 
 # Helper: Clean Markdown Text
