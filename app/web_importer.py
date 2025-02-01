@@ -4,7 +4,7 @@ import sqlite3
 import re
 import pytz
 import shutil
-import requests  # Make sure to import requests
+import requests
 from datetime import datetime
 from werkzeug.utils import secure_filename
 
@@ -12,7 +12,7 @@ from werkzeug.utils import secure_filename
 BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "app"))
 DATA_DIR = os.path.join(BASE_DIR, "data")
 DB_NAME = os.path.join(DATA_DIR, "trades.db")
-UPLOAD_DIR = os.path.join(DATA_DIR, "uploads")  # Renamed from UPLOAD_FOLDER
+UPLOAD_DIR = os.path.join(DATA_DIR, "uploads")
 ALLOWED_EXTENSIONS = {'md'}
 
 # Ensure directories exist

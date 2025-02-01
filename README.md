@@ -13,27 +13,31 @@ pip install -r requirements.txt
 
 ## How to Use 🚦
 
-1. **Set up the Database**:
-   - Run the `database_utils.py` script to initialize the database.
-   - Create one or more accounts using the same utility.
-
-2. **Prepare Your Journal Entries**:
-   - Use the provided markdown template (`Template ✅⭕🟡⛔⬆️⬇️.md`) to format your trading journal entries.
-   - Ensure all required fields match the template format.
-   - **Note**: This tool is not inherently compatible with any specific app. However, [Joplin](https://joplinapp.org/), a markdown-based open-source note-taking app, can be a helpful tool for journaling your trades and exporting them in the required markdown format.
-
-3. **Run the Parser**:
-   - Use `markdown_parser.py` to process and import markdown files into the database.
-
-4. **Launch the App**:
-   - Start the backend API and Dashboard:
+1. **Launch the App**:
+   - Start the backend API and Dashboard by running:
      ```bash
      python launcher.py
      ```
-   - Go to the interactive web dashboard:
-     ```bash
-     http://127.0.0.1:8050/
-     ```
+   - The interactive web dashboard will be available at: [http://127.0.0.1:8050/](http://127.0.0.1:8050/).
+   - **Note**: If no database file is detected, the initialization script will automatically run to set up the database.
+
+2. **(Optional) Modify/Add entries or accounts**:
+   - If needed you can use the `database_utils.py` script located under the `utils` directory to delete or update entries in the database, add accouts etc.
+
+3. **Journal your trades using the template**:
+   - Use the provided markdown template (`Template ✅⭕🟡⛔⬆️⬇️.md`) to format your trading journal entries.
+   - You need to export the `.md` file of the trades you want to import.
+   - **Important**: Ensure all required fields strictly follow the template format; otherwise, the import will fail.
+   - **Note**: Although this tool isn’t inherently compatible with any specific app, I use [Joplin](https://joplinapp.org/).
+
+4. **Import**:
+   - On the main page, clicking the **Import File** button will redirect you to the upload interface.
+   - (Optional) open your browser and visit: [http://127.0.0.1:5050/upload](http://127.0.0.1:5050/upload).
+   - Use the provided interface to select an account from the dropdown and upload your markdown file(s). The web importer will parse your entries and import them into the database.
+
+5. **(Optional) Use the Markdown Parser Directly**:
+   - If you prefer not to rely on the web importer interface, you can use the `markdown_parser.py` script located under the `utils` directory to parse and import your markdown files directly.
+
 
 ## What It Can Be Used For
 - Track performance across different accounts or strategies.
@@ -42,11 +46,3 @@ pip install -r requirements.txt
 ## License 📜
 
 This project is licensed under the [GNU Affero General Public License (AGPL)](https://www.gnu.org/licenses/agpl-3.0.en.html).
-
-### Key Features of the AGPL:
-
-- **Freedom to Use**: You are free to use, modify, and distribute the software.
-- **Copyleft Requirement**: Any modified versions of the software, as well as applications that interact with it over a network, must also be released under the AGPL.
-- **Access to Source Code**: If you distribute the software or provide access to it as a service, you must make the source code available to the users.
-- **Promotes Collaboration**: Encourages a collaborative development environment by requiring derived works to remain free and open.
-- **No Warranty**: The software is provided "as-is" without any warranty, express or implied, including but not limited to the warranties of merchantability or fitness for a particular purpose.
