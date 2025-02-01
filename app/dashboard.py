@@ -6,11 +6,10 @@ import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 
-# Initialize Dash app
+# Initialize Dash app with a dark theme
 external_stylesheets = [dbc.themes.DARKLY]
 app = dash.Dash(__name__, external_stylesheets=external_stylesheets, title="TradeStatsEngine")
 server = app.server
-
 
 # Helper function to fetch data from the backend
 def fetch_data(endpoint, params=None):
@@ -22,73 +21,113 @@ def fetch_data(endpoint, params=None):
         print(f"Error fetching data from {endpoint}: {e}")
         return {}
 
-
 # Fetch the list of accounts for the dropdown
 accounts = fetch_data('/accounts')
-
-# Safeguard in case accounts are not fetched
 if not accounts:
     print("No accounts fetched from backend. Please ensure the backend is running and accessible.")
     accounts = [{"id": 0, "name": "No Accounts Available"}]
-
 account_options = [{"label": account["name"], "value": account["id"]} for account in accounts]
 
-# Layout with Dropdown for Account Selection
+# Layout
 app.layout = dbc.Container([
-    html.H1("TradeStatsEngine 📈", className="text-center my-4"),
+    dbc.Row(
+        dbc.Col(
+            html.H1("TradeStatsEngine 📈", className="my-4 text-center"),
+            width=12
+        )
+    ),
     dbc.Row([
         dbc.Col(
             html.Div([
-                html.H4("Select Account", className="text-center"),
+                html.H4("Select Account", className="mb-2"),
                 dbc.Select(
                     id="account-dropdown",
                     options=account_options,
-                    value=accounts[0]["id"] if accounts else None,  # Avoid IndexError if empty
-                    className="mb-4",
+                    value=accounts[0]["id"] if accounts else None,
                     style={
                         "backgroundColor": "#333",
                         "color": "#fff",
                         "fontSize": "16px",
-                        "width": "50%",
-                        "margin": "0 auto",
+                        "width": "70%",  # Adjust width as needed
                     },
                 )
             ]),
-            width=4,
-            className="offset-4",
+            width=6,
+            style={"textAlign": "left"}
         ),
-    ], className="mb-4"
-    ),
-    dbc.Row([
         dbc.Col(
-            html.Div([html.H4("Total P/L", className="text-center"), html.H1(id="total-pnl", className="text-primary text-center")]),
-            width=4),
-        dbc.Col(
-            html.Div([html.H4("Win Rate", className="text-center"), html.H1(id="win-rate", className="text-info text-center")]),
-            width=4),
-        dbc.Col(html.Div(
-            [html.H4("Total Trades", className="text-center"), html.H1(id="total-trades", className="text-center")]),
-                width=4),
+            html.Div(
+                dbc.Button(
+                    "Import File",
+                    color="primary",
+                    href="http://127.0.0.1:5050/upload",
+                    target="_blank"
+                ),
+                style={"textAlign": "right", "marginTop": "20px"}
+            ),
+            width=6
+        )
     ], className="mb-4"),
     dbc.Row([
-        dbc.Col(html.Div([html.H5("Win", className="text-center"), html.H3(id="total-wins", className="text-success text-center")]),
-                width=3),
         dbc.Col(
-            html.Div([html.H5("Loss", className="text-center"), html.H3(id="total-losses", className="text-danger text-center")]),
-            width=3),
-        dbc.Col(html.Div(
-            [html.H5("Break Even", className="text-center"), html.H3(id="total-break-even", className="text-warning text-center")]),
-                width=3),
-        dbc.Col(html.Div(
-            [html.H5("Unknowns", className="text-center"), html.H3(id="total-unknowns", className="text-muted text-center")]),
-                width=3),
+            html.Div([
+                html.H4("Total P/L", className="text-center"),
+                html.H1(id="total-pnl", className="text-primary text-center")
+            ]),
+            width=4
+        ),
+        dbc.Col(
+            html.Div([
+                html.H4("Win Rate", className="text-center"),
+                html.H1(id="win-rate", className="text-info text-center")
+            ]),
+            width=4
+        ),
+        dbc.Col(
+            html.Div([
+                html.H4("Total Trades", className="text-center"),
+                html.H1(id="total-trades", className="text-center")
+            ]),
+            width=4
+        ),
     ], className="mb-4"),
-    dbc.Row([dbc.Col(dcc.Graph(id="equity-curve", config={"displayModeBar": True}), width=12)], className="mb-4"),
+    dbc.Row([
+        dbc.Col(
+            html.Div([
+                html.H5("Win", className="text-center"),
+                html.H3(id="total-wins", className="text-success text-center")
+            ]),
+            width=3
+        ),
+        dbc.Col(
+            html.Div([
+                html.H5("Loss", className="text-center"),
+                html.H3(id="total-losses", className="text-danger text-center")
+            ]),
+            width=3
+        ),
+        dbc.Col(
+            html.Div([
+                html.H5("Break Even", className="text-center"),
+                html.H3(id="total-break-even", className="text-warning text-center")
+            ]),
+            width=3
+        ),
+        dbc.Col(
+            html.Div([
+                html.H5("Unknowns", className="text-center"),
+                html.H3(id="total-unknowns", className="text-muted text-center")
+            ]),
+            width=3
+        ),
+    ], className="mb-4"),
+    dbc.Row([
+        dbc.Col(dcc.Graph(id="equity-curve", config={"displayModeBar": True}), width=12)
+    ], className="mb-4"),
     dbc.Row([
         dbc.Col(dcc.Graph(id="monthly-performance", config={"displayModeBar": True}), width=6),
         dbc.Col(dcc.Graph(id="daily-performance", config={"displayModeBar": True}), width=6)
     ], className="mb-4"),
-
     dbc.Row([
         dbc.Col(
             html.Div([
@@ -115,17 +154,18 @@ app.layout = dbc.Container([
             html.Div([
                 html.H4("Best Trades", className="text-center"),
                 html.Ul(id="best-trades-list")
-            ]), width=6
+            ]),
+            width=6
         ),
         dbc.Col(
             html.Div([
                 html.H4("Worst Trades", className="text-center"),
                 html.Ul(id="worst-trades-list")
-            ]), width=6
+            ]),
+            width=6
         )
     ]),
 ], fluid=True)
-
 
 # Callback to update graphs and statistics when an account is selected
 @app.callback(
@@ -153,7 +193,7 @@ app.layout = dbc.Container([
     ]
 )
 def update_dashboard(selected_account, time_writing_toggle):
-    # Fetch data
+    # Fetch data from your backend
     summary = fetch_data(f"/stats/summary?account_id={selected_account}") or {}
     pnl_data = fetch_data(f"/stats/pnl?account_id={selected_account}") or []
     monthly_performance = fetch_data(f"/stats/monthly?account_id={selected_account}&time_writing_toggle={str(time_writing_toggle).lower()}") or {}
@@ -169,33 +209,27 @@ def update_dashboard(selected_account, time_writing_toggle):
     total_trades = summary.get("total_trades", 0)
     win_rate = (summary.get("total_wins", 0) / total_trades) * 100 if total_trades else 0
 
-    # General color mapping and outcome order
+    # Color mapping for outcomes
     color_mapping = {
-        "Win": "#00BC8C",  # Green
-        "Loss": "#E74C3C",  # Red
-        "Break-even": "#F39C12",  # Orange
+        "Win": "#00BC8C",
+        "Loss": "#E74C3C",
+        "Break-even": "#F39C12",
         "Unknown": "grey"
     }
     outcome_order = ['Win', 'Break-even', 'Loss']
 
-
     # Equity Curve
-    pnl_df = pd.DataFrame(pnl_data) if pnl_data else pd.DataFrame()
-    if not pnl_df.empty:
-
+    if pnl_data:
+        pnl_df = pd.DataFrame(pnl_data)
         pnl_df['trade_outcome'] = pnl_df['profit_loss'].apply(
             lambda pnl: 'Win' if pnl > 0.5 else ('Break-even' if abs(pnl) < 0.5 else 'Loss')
         )
-
         pnl_df['color'] = pnl_df['trade_outcome'].map(color_mapping)
-
-        # Ensure the order of trade_outcome labels
         pnl_df['trade_outcome'] = pd.Categorical(
             pnl_df['trade_outcome'],
             categories=outcome_order,
             ordered=True
         )
-
         equity_curve_fig = go.Figure()
         equity_curve_fig.add_trace(go.Scatter(
             x=pnl_df['date'],
@@ -204,7 +238,6 @@ def update_dashboard(selected_account, time_writing_toggle):
             name='Equity Curve',
             line=dict(color='blue')
         ))
-
         for outcome in outcome_order:
             filtered_df = pnl_df[pnl_df['trade_outcome'] == outcome]
             if not filtered_df.empty:
@@ -215,21 +248,12 @@ def update_dashboard(selected_account, time_writing_toggle):
                     marker=dict(color=filtered_df['color'].iloc[0], size=10),
                     name=outcome
                 ))
-
         equity_curve_fig.update_layout(
-            showlegend=True,
             title="Equity Curve",
             xaxis_title="Date",
             yaxis_title="Cumulative P/L (€)",
-            template="plotly_dark"
-        )
-
-        equity_curve_fig.update_layout(
-            showlegend=True,
-            title="Equity Curve",
-            xaxis_title="Date",
-            yaxis_title="Cumulative P/L (€)",
-            template="plotly_dark"
+            template="plotly_dark",
+            showlegend=True
         )
     else:
         equity_curve_fig = go.Figure().update_layout(
@@ -240,20 +264,9 @@ def update_dashboard(selected_account, time_writing_toggle):
     # Monthly Performance
     if monthly_performance:
         monthly_df = pd.DataFrame(monthly_performance.items(), columns=["Month", "PNL"])
-
-        # Convert 'Month' to datetime for proper sorting
-        monthly_df["Month"] = pd.to_datetime(
-            monthly_df["Month"],
-            format="%Y-%m",
-            errors="coerce"
-        )
-
-        # Sort by the datetime Month column
+        monthly_df["Month"] = pd.to_datetime(monthly_df["Month"], format="%Y-%m", errors="coerce")
         monthly_df = monthly_df.sort_values("Month")
-
-        # Format 'Month' back to display 'December 2024'
         monthly_df["Month"] = monthly_df["Month"].dt.strftime("%B %Y")
-
         monthly_performance_fig = px.bar(
             monthly_df,
             x="Month",
@@ -264,11 +277,14 @@ def update_dashboard(selected_account, time_writing_toggle):
             template="plotly_dark",
             color_continuous_scale='Cividis'
         )
-
-        # Explicitly format x-axis for better date display
         monthly_performance_fig.update_xaxes(
             tickmode="array",
             tickvals=monthly_df["Month"].unique()
+        )
+    else:
+        monthly_performance_fig = go.Figure().update_layout(
+            title="Monthly Performance (No Data)",
+            template="plotly_dark"
         )
 
     # Daily Performance
@@ -282,16 +298,12 @@ def update_dashboard(selected_account, time_writing_toggle):
         day_order = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
         daily_df['Day'] = pd.Categorical(daily_df['Day'], categories=day_order, ordered=True)
         daily_df = daily_df.sort_values('Day')
-
         daily_df['color'] = daily_df['Outcome'].map(color_mapping)
-
-        # Ensure the order of Outcome labels
         daily_df['Outcome'] = pd.Categorical(
             daily_df['Outcome'],
             categories=outcome_order,
             ordered=True
         )
-
         daily_performance_fig = go.Figure()
         for outcome in outcome_order:
             outcome_df = daily_df[daily_df['Outcome'] == outcome]
@@ -300,9 +312,8 @@ def update_dashboard(selected_account, time_writing_toggle):
                     x=outcome_df['Day'],
                     y=outcome_df['Count'],
                     name=outcome,
-                    marker=dict(color=outcome_df['color'].iloc[0])  # Apply mapped color
+                    marker=dict(color=outcome_df['color'].iloc[0])
                 ))
-
         daily_performance_fig.update_layout(
             title="Daily Performance",
             xaxis_title="Day",
@@ -322,19 +333,14 @@ def update_dashboard(selected_account, time_writing_toggle):
         killzone_list.append({"Killzone": killzone, "Outcome": "Win", "Count": outcomes["wins"]})
         killzone_list.append({"Killzone": killzone, "Outcome": "Loss", "Count": outcomes["losses"]})
         killzone_list.append({"Killzone": killzone, "Outcome": "Break-even", "Count": outcomes["break_even"]})
-
     killzone_outcomes_df = pd.DataFrame(killzone_list)
-
     if not killzone_outcomes_df.empty:
         killzone_outcomes_df['color'] = killzone_outcomes_df['Outcome'].map(color_mapping)
-
-        # Ensure the order of Outcome labels
         killzone_outcomes_df['Outcome'] = pd.Categorical(
             killzone_outcomes_df['Outcome'],
             categories=outcome_order,
             ordered=True
         )
-
         killzone_outcomes_fig = go.Figure()
         for outcome in outcome_order:
             outcome_df = killzone_outcomes_df[killzone_outcomes_df['Outcome'] == outcome]
@@ -343,9 +349,8 @@ def update_dashboard(selected_account, time_writing_toggle):
                     x=outcome_df['Killzone'],
                     y=outcome_df['Count'],
                     name=outcome,
-                    marker=dict(color=outcome_df['color'].iloc[0])  # Apply mapped color
+                    marker=dict(color=outcome_df['color'].iloc[0])
                 ))
-
         killzone_outcomes_fig.update_layout(
             title="Trade Outcomes by Killzone",
             xaxis_title="Killzone",
@@ -364,13 +369,11 @@ def update_dashboard(selected_account, time_writing_toggle):
     for killzone, days in killzone_performance.items():
         for day, count in days.items():
             killzone_list.append({"Killzone": killzone, "Day": day, "Count": count})
-
     killzone_df = pd.DataFrame(killzone_list)
     if not killzone_df.empty:
         day_order = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
         killzone_df['Day'] = pd.Categorical(killzone_df['Day'], categories=day_order, ordered=True)
         killzone_df = killzone_df.sort_values(['Killzone', 'Day'])
-
         killzone_fig = px.bar(
             killzone_df,
             x="Killzone",
@@ -388,52 +391,28 @@ def update_dashboard(selected_account, time_writing_toggle):
             template="plotly_dark"
         )
 
-    # Heatmap
+    # Heatmap of Duration
     duration_df = pd.DataFrame(duration_data)
     if not duration_df.empty:
-        # Define the bins and labels based on duration
         bin_edges = pd.cut(duration_df['duration'], bins=10, retbins=True)[1]
-
-        # Function to format the bin labels as ranges
         def format_range(start, end):
             return f"{int(start)}-{int(end)}"
-
-        # Create labels for the bins using the bin edges
-        bin_labels = [
-            format_range(bin_edges[i], bin_edges[i + 1])
-            for i in range(len(bin_edges) - 1)
-        ]
-
-        # Assign the new labels to the 'Duration Range' column
-        duration_df['Duration Range'] = pd.cut(
-            duration_df['duration'],
-            bins=bin_edges,
-            labels=bin_labels
-        )
-
-        # Optional: Include a legend in the visualization
+        bin_labels = [format_range(bin_edges[i], bin_edges[i + 1]) for i in range(len(bin_edges) - 1)]
+        duration_df['Duration Range'] = pd.cut(duration_df['duration'], bins=bin_edges, labels=bin_labels)
         heatmap_data = duration_df.groupby(['Duration Range', 'outcome']).size().reset_index(name='Count')
         heatmap_pivot = heatmap_data.pivot(index='outcome', columns='Duration Range', values='Count').fillna(0)
-
         heatmap_fig = px.imshow(
             heatmap_pivot,
             title="Heatmap of Trade Outcomes vs. Duration",
-            labels={
-                "x": "Duration Range (in minutes)",
-                "y": "Trade Outcome",
-                "color": "Frequency"
-            },
+            labels={"x": "Duration Range (in minutes)", "y": "Trade Outcome", "color": "Frequency"},
             template="plotly_dark",
             color_continuous_scale='Cividis'
         )
-
-        # Add range descriptions to the title or as a legend
         heatmap_fig.update_layout(
             xaxis_title="Duration Ranges (Minutes)",
             yaxis_title="Trade Outcome",
             font=dict(size=12)
         )
-
     else:
         heatmap_fig = go.Figure().update_layout(
             title="Heatmap of Trade Outcomes vs. Duration (No Data)",
@@ -448,7 +427,6 @@ def update_dashboard(selected_account, time_writing_toggle):
             categories=outcome_order,
             ordered=True
         )
-
         reward_ratios_fig = px.box(
             reward_ratios_df,
             x="outcome",
@@ -456,14 +434,10 @@ def update_dashboard(selected_account, time_writing_toggle):
             color="outcome",
             title="Reward Ratios by Trade Outcome",
             template="plotly_dark",
-            labels={
-                "outcome": "Trade Outcome",
-                "reward_ratio": "Reward Ratio"
-            },
+            labels={"outcome": "Trade Outcome", "reward_ratio": "Reward Ratio"},
             color_discrete_map=color_mapping,
             points="all"
         )
-
         reward_ratios_fig.update_layout(
             xaxis_title="Trade Outcome",
             yaxis_title="Reward Ratio",
@@ -471,7 +445,6 @@ def update_dashboard(selected_account, time_writing_toggle):
             boxmode="group",
             font=dict(size=12)
         )
-
     else:
         reward_ratios_fig = go.Figure().update_layout(
             title="Reward Ratios by Trade Outcome (No Data)",
@@ -487,7 +460,6 @@ def update_dashboard(selected_account, time_writing_toggle):
         html.Li(f"File: {trade.get('filename')} | Loss: €{trade.get('profit_loss')}")
         for trade in best_worst_trade.get("worst_trades", [])
     ]
-
 
     return (
         f"€{total_pnl:.2f}",
@@ -510,4 +482,3 @@ def update_dashboard(selected_account, time_writing_toggle):
 
 if __name__ == "__main__":
     app.run_server(debug=False)
-

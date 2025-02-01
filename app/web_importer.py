@@ -4,6 +4,7 @@ import sqlite3
 import re
 import pytz
 import shutil
+import requests  # Make sure to import requests
 from datetime import datetime
 from werkzeug.utils import secure_filename
 
@@ -18,18 +19,28 @@ ALLOWED_EXTENSIONS = {'md'}
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 app = Flask(__name__)
-app.config['UPLOAD_FOLDER'] = UPLOAD_DIR  # Updated to use UPLOAD_DIR
+app.config['UPLOAD_FOLDER'] = UPLOAD_DIR
 
-# Check allowed file extensions
+# ------------------------------------------------------------------------------
+# Helper function to fetch data from the backend (e.g. the list of accounts)
+def fetch_data(endpoint, params=None):
+    try:
+        response = requests.get(f"http://127.0.0.1:5000{endpoint}", params=params)
+        response.raise_for_status()
+        return response.json()
+    except requests.exceptions.RequestException as e:
+        print(f"Error fetching data from {endpoint}: {e}")
+        return {}
+
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
-# Helper: Clean Markdown Text
+# Clean Markdown Text
 def clean_markdown_text(text):
     if not text:
         return ""
     text = re.sub(r'(\*\*|__)(.*?)\1', r'\2', text)  # Remove bold and italic markers
-    text = re.sub(r'(\*|_)(.*?)\1', r'\2', text)     # Remove stray markers
+    text = re.sub(r'(\*|_)(.*?)\1', r'\2', text)       # Remove stray markers
     return text.strip()
 
 # Parse Markdown File
@@ -41,13 +52,13 @@ def parse_markdown_file(file_path):
 
         # Define regex patterns for each field
         fields = {
-            "position_size": r"Position\s*Size:\s*([\d\.]+)",  # Matches "Position Size: 0.01"
-            "opened": r"Opened:\s*(\d{2}/\d{2}/\d{4} \d{2}:\d{2})",  # Matches "Opened: 28/08/2024 11:15"
-            "closed": r"Closed:\s*(\d{2}/\d{2}/\d{4} \d{2}:\d{2})",  # Matches "Closed: 28/08/2024 14:30"
-            "pips_gained_lost": r"Pips\s*Gained/Lost:\s*([\d\.]+)",  # Matches "Pips Gained/Lost: 366"
-            "profit_loss": r"Profit/Loss:\s*([\+\-]?\d+\.\d+€)",  # Matches "Profit/Loss: +3.29€"
-            "risk_reward": r"R/R:\s*([\d\.]+)",  # Matches "R/R: 2"
-            "strategy_used": r"Strategy\s*Used:\s*(.*)",  # Matches "Strategy Used: Box setup"
+            "position_size": r"Position\s*Size:\s*([\d\.]+)",
+            "opened": r"Opened:\s*(\d{2}/\d{2}/\d{4} \d{2}:\d{2})",
+            "closed": r"Closed:\s*(\d{2}/\d{2}/\d{4} \d{2}:\d{2})",
+            "pips_gained_lost": r"Pips\s*Gained/Lost:\s*([\d\.]+)",
+            "profit_loss": r"Profit/Loss:\s*([\+\-]?\d+\.\d+€)",
+            "risk_reward": r"R/R:\s*([\d\.]+)",
+            "strategy_used": r"Strategy\s*Used:\s*(.*)",
         }
 
         for key, pattern in fields.items():
@@ -69,7 +80,6 @@ def parse_markdown_file(file_path):
             try:
                 opened_time = datetime.strptime(clean_markdown_text(raw_opened), "%d/%m/%Y %H:%M")
                 closed_time = datetime.strptime(clean_markdown_text(raw_closed), "%d/%m/%Y %H:%M")
-
                 trade_entry["trade_duration_minutes"] = max(0, (closed_time - opened_time).total_seconds() // 60)
                 trade_entry["open_day"] = opened_time.strftime("%A")
                 trade_entry["open_time"] = opened_time.strftime("%H:%M")
@@ -107,7 +117,6 @@ def determine_killzone(opened_time):
         rome_tz = pytz.timezone("Europe/Rome")
         opened_time = datetime.strptime(clean_markdown_text(opened_time), "%d/%m/%Y %H:%M").astimezone(rome_tz)
         hour = opened_time.hour
-
         if 2 <= hour < 5:
             return "London"
         elif 7 <= hour < 10:
@@ -167,11 +176,15 @@ def move_processed_file(file_path, account_id):
     except Exception as e:
         print(f"Error moving processed file: {e}")
 
-# Flask Route for File Upload
 @app.route('/upload', methods=['GET', 'POST'])
 def upload_file():
     if request.method == 'GET':
-        return render_template('upload.html')  # Render the HTML form
+        # Fetch the list of accounts from the backend
+        accounts = fetch_data('/accounts')
+        if not accounts:
+            print("No accounts fetched from backend. Please ensure the backend is running and accessible.")
+            accounts = [{"id": 0, "name": "No Accounts Available"}]
+        return render_template('upload.html', accounts=accounts)
 
     if request.method == 'POST':
         if 'file' not in request.files:
@@ -195,6 +208,5 @@ def upload_file():
             return jsonify({"error": "Failed to parse the file"}), 500
         return jsonify({"error": "Invalid file format"}), 400
 
-# Run the Flask App
 if __name__ == '__main__':
     app.run(port=5050, debug=False)
