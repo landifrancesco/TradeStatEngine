@@ -8,11 +8,11 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy the 'app' directory into /app/app
-COPY ./app /app/app
+# Copy the contents of the 'app' directory directly into /app
+COPY ./app/ /app/
 
 # Copy the 'utils' directory into /app/utils
-COPY ./utils /app/utils
+COPY ./utils/ /app/utils/
 
 # Create a directory for persistent data
 RUN mkdir -p /app/data
@@ -24,4 +24,4 @@ VOLUME ["/app/data"]
 EXPOSE 8050
 
 # Run the application
-CMD ["python", "app/launcher.py"]
+CMD ["python", "launcher.py"]
