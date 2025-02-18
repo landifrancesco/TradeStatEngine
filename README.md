@@ -43,7 +43,7 @@ pip install -r requirements.txt
 ### **Run with Docker (Pull from GHCR)**
 ```bash
 docker pull ghcr.io/landifrancesco/tradestatengine:latest
-docker run -d -p 8050:8050 --name tradestatengine -v tradestatengine_data:/app/data ghcr.io/YOUR_GITHUB_USERNAME/tradestatengine:latest
+docker run -d -p 8050:8050 --name tradestatengine -v tradestatengine_data:/app/data ghcr.io/landifrancesco/tradestatengine:latest
 ```
 
 ### **Run with Docker Compose**
