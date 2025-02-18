@@ -8,20 +8,20 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy the contents of the 'app' directory directly into /app
+# Copy your 'app' folder
 COPY ./app/ /app/
 
-# Copy the 'utils' directory into /app/utils
+# Copy your 'utils' folder
 COPY ./utils/ /app/utils/
 
 # Create a directory for persistent data
 RUN mkdir -p /app/data
 
-# Set the volume path for the database
+# Mark the /app/data folder as a volume to persist the DB
 VOLUME ["/app/data"]
 
 # Expose Dash's default port
 EXPOSE 8050
 
-# Run the application
+# Run the application (which calls database_utils.py automatically if needed)
 CMD ["python", "launcher.py"]

@@ -1,11 +1,28 @@
 import sqlite3
 import os
+import sys
+import select
 from colorama import Fore, Style
 
 # Define directories and database file
 BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "app"))  # Moves one level up to 'app'
 DATA_DIR = os.path.join(BASE_DIR, "data")
 DB_NAME = os.path.join(DATA_DIR, "trades.db")
+
+TIMEOUT_SECONDS = 20
+
+def timed_input(prompt, timeout=TIMEOUT_SECONDS):
+    """
+    Read user input with a timeout. If no input is entered before 'timeout'
+    seconds, return None.
+    """
+    sys.stdout.write(prompt)
+    sys.stdout.flush()
+    rlist, _, _ = select.select([sys.stdin], [], [], timeout)
+    if rlist:
+        return sys.stdin.readline().strip()
+    else:
+        return None
 
 class DatabaseManager:
     """
@@ -67,14 +84,15 @@ class DatabaseManager:
     @staticmethod
     def reset_database():
         """
-        Reset the database by clearing all rows in the trades table.
+        Reset the database by clearing all rows in the trades and accounts tables.
         """
         try:
             conn = sqlite3.connect(DB_NAME)
             cursor = conn.cursor()
 
             confirm = input(
-                "Are you sure you want to reset the database? This will delete all rows but keep the schema. (yes/no): ").lower()
+                "Are you sure you want to reset the database? This will delete all rows but keep the schema. (yes/no): "
+            ).lower()
             if confirm == "yes":
                 cursor.execute("DELETE FROM trades")
                 cursor.execute("DELETE FROM accounts")
@@ -204,7 +222,7 @@ class DatabaseManager:
                 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """
             values = (
-                trade_entry.account_id,  # Include account_id
+                trade_entry.account_id,
                 trade_entry.filename,
                 trade_entry.position_size,
                 trade_entry.opened,
@@ -273,7 +291,15 @@ if __name__ == "__main__":
         print("6. Delete trade")
         print("7. Exit")
 
-        choice = input("\nEnter your choice: ")
+        choice = timed_input("\nEnter your choice: ")
+
+        if choice is None:
+            print(f"\nNo input detected for {TIMEOUT_SECONDS} seconds.")
+            print("Automatically setting up the database and creating a default Real account...\n")
+            DatabaseManager.setup_database()
+            DatabaseManager.create_account("Default - Real", "Real")
+            print("Default Real account created. Exiting.\n")
+            break
 
         if choice == "1":
             DatabaseManager.setup_database()
@@ -287,7 +313,6 @@ if __name__ == "__main__":
             DatabaseManager.view_accounts()
         elif choice == "5":
             accounts = DatabaseManager.get_all_accounts()
-            # Display available accounts
             print("\nAvailable Accounts:")
             for account in accounts:
                 print(f"ID: {account[0]}, Name: {account[1]}, Type: {account[2]}")
