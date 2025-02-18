@@ -1,5 +1,5 @@
-
 # TradeStatEngine 📊
+
 TradeStatEngine is a tool designed to import trading journal data and generate detailed statistics and visualizations to analyze your trading performance.
 
 ## Contribution 🙌
@@ -22,7 +22,7 @@ pip install -r requirements.txt
    - **Note**: If no database file is detected, the initialization script will automatically run to set up the database.
 
 2. **(Optional) Modify/Add entries or accounts**:
-   - If needed you can use the `database_utils.py` script located under the `utils` directory to delete or update entries in the database, add accouts etc.
+   - If needed you can use the `database_utils.py` script located under the `utils` directory to delete or update entries in the database, add accounts, etc.
 
 3. **Journal your trades using the template**:
    - Use the provided markdown template (`Template ✅⭕🟡⛔⬆️⬇️.md`) to format your trading journal entries.
@@ -38,11 +38,41 @@ pip install -r requirements.txt
 5. **(Optional) Use the Markdown Parser Directly**:
    - If you prefer not to rely on the web importer interface, you can use the `markdown_parser.py` script located under the `utils` directory to parse and import your markdown files directly.
 
+## 🐳 Docker Deployment 
+
+### **Run with Docker (Pull from GHCR)**
+```bash
+docker pull ghcr.io/landifrancesco/tradestatengine:latest
+docker run -d -p 8050:8050 --name tradestatengine -v tradestatengine_data:/app/data ghcr.io/YOUR_GITHUB_USERNAME/tradestatengine:latest
+```
+
+### **Run with Docker Compose**
+```bash
+docker-compose up -d
+```
+
+The interactive web dashboard will be available at: [http://127.0.0.1:8050/](http://127.0.0.1:8050/).
+
+**Stop the application:**
+```bash
+docker-compose down
+```
+
+**Rebuild the container (after code changes):**
+```bash
+docker-compose up -d --build
+```
+
+**View logs:**
+```bash
+docker-compose logs -f
+```
 
 ## What It Can Be Used For
 - Track performance across different accounts or strategies.
 - Visualize key metrics like equity curves, win rates, and performance by time, day, or session.
 - Gain insights into trade outcomes and strategies.
+
 ## License 📜
 
 This project is licensed under the [GNU Affero General Public License (AGPL)](https://www.gnu.org/licenses/agpl-3.0.en.html).

@@ -1,0 +1,15 @@
+version: '3.8'
+
+services:
+  tradestatengine:
+    image: ghcr.io/landifrancesco/tradestatengine:latest
+    container_name: tradestatengine
+    ports:
+      - "8050:8050"
+    volumes:
+      - tradestatengine_data:/app/data
+    restart: always
+
+volumes:
+  tradestatengine_data:
+    driver: local
