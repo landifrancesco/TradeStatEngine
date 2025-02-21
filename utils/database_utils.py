@@ -1,7 +1,9 @@
+import msvcrt
 import sqlite3
 import os
 import sys
 import select
+import time
 from colorama import Fore, Style
 
 # Define directories and database file
@@ -9,24 +11,22 @@ BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "app"))
 DATA_DIR = os.path.join(BASE_DIR, "data")
 DB_NAME = os.path.join(DATA_DIR, "trades.db")
 
-TIMEOUT_SECONDS = 20
 
-def timed_input(prompt, timeout=TIMEOUT_SECONDS):
+def is_running_in_docker():
     """
-    Read user input with a timeout. If no input is entered before 'timeout'
-    seconds, return None.
+    Check if the script is running inside a Docker container.
     """
-    sys.stdout.write(prompt)
-    sys.stdout.flush()
-    for remaining in range(timeout, 0, -1):
-        sys.stdout.write(f"\r{prompt} {remaining} seconds remaining... ")
-        sys.stdout.flush()
-        rlist, _, _ = select.select([sys.stdin], [], [], 1)
-        if rlist:
-            sys.stdout.write("\n")
-            return sys.stdin.readline().strip()
-    sys.stdout.write("\n")
-    return None
+    try:
+        with open('/proc/1/cgroup', 'rt') as f:
+            if 'docker' in f.read() or 'containerd' in f.read():
+                return True
+    except FileNotFoundError:
+        pass
+
+    if os.path.exists('/run/.containerenv'):
+        return True
+
+    return False
 
 class DatabaseManager:
     """
@@ -40,7 +40,7 @@ class DatabaseManager:
         """
         try:
             os.makedirs(DATA_DIR, exist_ok=True)
-            conn = sqlite3.connect(DB_NAME)
+            conn = sqlite3.connect(DB_NAME, timeout=5)
             cursor = conn.cursor()
 
             cursor.execute("""
@@ -63,8 +63,7 @@ class DatabaseManager:
                     killzone TEXT,
                     time_writing TEXT
                 );
-            """
-            )
+            """)
 
             cursor.execute("""
                 CREATE TABLE IF NOT EXISTS accounts (
@@ -72,8 +71,8 @@ class DatabaseManager:
                     name TEXT NOT NULL,
                     type TEXT CHECK(type IN ('Real', 'Paper')) NOT NULL
                 );
-            """
-            )
+            """)
+
             conn.commit()
             conn.close()
             print(f"Database '{DB_NAME}' is ready.")
@@ -280,61 +279,63 @@ class DatabaseManager:
 
 
 if __name__ == "__main__":
-    while True:
-        print("\nDatabase Utility:")
-        print("1. Setup Database")
-        print("2. Reset Database")
-        print("3. Add account")
-        print("4. View accounts")
-        print("5. View all entries")
-        print("6. Delete trade")
-        print("7. Exit")
+    if is_running_in_docker():
+        print("Running in Docker. Initializing database with default Real account...")
+        DatabaseManager.setup_database()
+        DatabaseManager.create_account("Default", "Real")
+        print("Default Real account created. Exiting.")
+    else:
+        while True:
+            print("\nDatabase Utility:")
+            print("1. Setup Database")
+            print("2. Reset Database")
+            print("3. Add account")
+            print("4. View accounts")
+            print("5. View all entries")
+            print("6. Delete trade")
+            print("7. Exit")
 
-        choice = timed_input("\nEnter your choice: ")
-
-        if choice is None:
-            print(f"\nNo input detected for {TIMEOUT_SECONDS} seconds.")
-            print("Automatically setting up the database and creating a default Real account...\n")
-            DatabaseManager.setup_database()
-            DatabaseManager.create_account("Default - Real", "Real")
-            print("Default Real account created. Exiting.\n")
-            break
-
-        if choice == "1":
-            DatabaseManager.setup_database()
-        elif choice == "2":
-            confirm = input("Are you sure you want to reset the database? (yes/no): ")
-            if confirm.lower() == "yes":
-                DatabaseManager.reset_database()
-        elif choice == "3":
-            DatabaseManager.insert_account()
-        elif choice == "4":
-            DatabaseManager.view_accounts()
-        elif choice == "5":
-            accounts = DatabaseManager.get_all_accounts()
-            print("\nAvailable Accounts:")
-            for account in accounts:
-                print(f"ID: {account[0]}, Name: {account[1]}, Type: {account[2]}")
-            account_id = input("Enter the account ID: ")
-            entries = DatabaseManager.view_all_entries(account_id)
-            if entries:
-                print("\nEntries for Account:")
-                for entry in entries:
-                    print(entry)
+            choice = input("\nEnter your choice: ")
+            if choice == "1":
+                DatabaseManager.setup_database()
+            elif choice == "2":
+                confirm = input("Are you sure you want to reset the database? (yes/no): ")
+                if confirm.lower() == "yes":
+                    print("Database reset functionality needs to be implemented.")
+            elif choice == "3":
+                name = input("Enter account name: ")
+                acc_type = input("Enter account type (Real/Paper): ")
+                if acc_type in ["Real", "Paper"]:
+                    DatabaseManager.create_account(name, acc_type)
+                else:
+                    print("Invalid account type.")
+            elif choice == "4":
+                DatabaseManager.view_accounts()
+            elif choice == "5":
+                accounts = DatabaseManager.get_all_accounts()
+                print("\nAvailable Accounts:")
+                for account in accounts:
+                    print(f"ID: {account[0]}, Name: {account[1]}, Type: {account[2]}")
+                account_id = input("Enter the account ID: ")
+                entries = DatabaseManager.view_all_entries(account_id)
+                if entries:
+                    print("\nEntries for Account:")
+                    for entry in entries:
+                        print(entry)
+                else:
+                    print("\nNo entries found for this account.")
+            elif choice == "6":
+                accounts = DatabaseManager.get_all_accounts()
+                print("\nAvailable Accounts:")
+                for account in accounts:
+                    print(f"ID: {account[0]}, Name: {account[1]}, Type: {account[2]}")
+                account_id = input("Enter the account ID: ")
+                entry_id = input("Enter the entry ID to delete: ")
+                DatabaseManager.delete_entry_by_id(account_id, int(entry_id))
+            elif choice == "7":
+                print("If you like this script you may consider offering me a coffee :D")
+                print("Send BEP20, ERC20, BTC, BCH, CRO, LTC, DASH, CELO, ZEC, XRP to:")
+                print(Fore.GREEN, "landifrancesco.wallet", Style.RESET_ALL)
+                break
             else:
-                print("\nNo entries found for this account.")
-        elif choice == "6":
-            accounts = DatabaseManager.get_all_accounts()
-            print("\nAvailable Accounts:")
-            for account in accounts:
-                print(f"ID: {account[0]}, Name: {account[1]}, Type: {account[2]}")
-            account_id = input("Enter the account ID: ")
-            entry_id = input("Enter the entry ID to delete: ")
-            DatabaseManager.delete_entry_by_id(account_id, int(entry_id))
-        elif choice == "7":
-            print("If you like this script you may consider offering me a coffee :D")
-            print("Send BEP20, ERC20, BTC, BCH, CRO, LTC, DASH, CELO, ZEC, XRP to:")
-            print(Fore.GREEN, "landifrancesco.wallet", Style.RESET_ALL)
-            break
-        else:
-            print("Invalid choice. Please try again.")
+                print("Invalid choice. Please try again.")

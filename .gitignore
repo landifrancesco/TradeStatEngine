@@ -1,7 +1,7 @@
 # Personal trades
 app/data/uploads/*
-app/data/trades.db
-app/data/*.bak
+app/data/trades.db*
+app/data/*.bak*
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

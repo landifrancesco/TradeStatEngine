@@ -6,16 +6,15 @@ from app import DB_NAME, DATA_DIR
 
 
 def initialize_database_if_needed():
+    os.makedirs(DATA_DIR, exist_ok=True)
     if not os.path.exists(DB_NAME) or os.path.getsize(DB_NAME) == 0:
         print("Database is empty or doesn't exist. Initializing...\n")
-        subprocess.run([sys.executable, "utils/database_utils.py"])
+        subprocess.run([sys.executable, "../utils/database_utils.py"])
+
 
 
 def run_app():
     try:
-        # Ensure the database directory exists
-        os.makedirs(DATA_DIR, exist_ok=True)
-
         # Initialize the database if empty or doesn't exist
         initialize_database_if_needed()
 
