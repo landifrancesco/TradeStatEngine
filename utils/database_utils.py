@@ -24,6 +24,69 @@ def is_running_in_docker():
 
     return False
 
+def run():
+    if is_running_in_docker():
+        print("Running in Docker. Initializing database with default Real account...")
+        DatabaseManager.setup_database()
+        DatabaseManager.create_account("Default", "Real")
+        print("Default Real account created. Exiting.")
+    else:
+        while True:
+            print("\nDatabase Utility:")
+            print("1. Setup Database")
+            print("2. Reset Database")
+            print("3. Add account")
+            print("4. View accounts")
+            print("5. View all entries")
+            print("6. Delete trade")
+            print("7. Exit")
+
+            choice = input("\nEnter your choice: ")
+            if choice == "1":
+                DatabaseManager.setup_database()
+            elif choice == "2":
+                confirm = input("Are you sure you want to reset the database? (yes/no): ")
+                if confirm.lower() == "yes":
+                    print("Database reset functionality needs to be implemented.")
+            elif choice == "3":
+                name = input("Enter account name: ")
+                acc_type = input("Enter account type (Real/Paper): ")
+                if acc_type in ["Real", "Paper"]:
+                    DatabaseManager.create_account(name, acc_type)
+                else:
+                    print("Invalid account type.")
+            elif choice == "4":
+                DatabaseManager.view_accounts()
+            elif choice == "5":
+                accounts = DatabaseManager.get_all_accounts()
+                print("\nAvailable Accounts:")
+                for account in accounts:
+                    print(f"ID: {account[0]}, Name: {account[1]}, Type: {account[2]}")
+                account_id = input("Enter the account ID: ")
+                entries = DatabaseManager.view_all_entries(account_id)
+                if entries:
+                    print("\nEntries for Account:")
+                    for entry in entries:
+                        print(entry)
+                else:
+                    print("\nNo entries found for this account.")
+            elif choice == "6":
+                accounts = DatabaseManager.get_all_accounts()
+                print("\nAvailable Accounts:")
+                for account in accounts:
+                    print(f"ID: {account[0]}, Name: {account[1]}, Type: {account[2]}")
+                account_id = input("Enter the account ID: ")
+                entry_id = input("Enter the entry ID to delete: ")
+                DatabaseManager.delete_entry_by_id(account_id, int(entry_id))
+            elif choice == "7":
+                print("If you like this script you may consider offering me a coffee :D")
+                print("Send BEP20, ERC20, BTC, BCH, CRO, LTC, DASH, CELO, ZEC, XRP to:")
+                print(Fore.GREEN, "landifrancesco.wallet", Style.RESET_ALL)
+                break
+            else:
+                print("Invalid choice. Please try again.")
+
+
 class DatabaseManager:
     """
     Utility class for interacting with the database.
@@ -275,63 +338,4 @@ class DatabaseManager:
 
 
 if __name__ == "__main__":
-    if is_running_in_docker():
-        print("Running in Docker. Initializing database with default Real account...")
-        DatabaseManager.setup_database()
-        DatabaseManager.create_account("Default", "Real")
-        print("Default Real account created. Exiting.")
-    else:
-        while True:
-            print("\nDatabase Utility:")
-            print("1. Setup Database")
-            print("2. Reset Database")
-            print("3. Add account")
-            print("4. View accounts")
-            print("5. View all entries")
-            print("6. Delete trade")
-            print("7. Exit")
-
-            choice = input("\nEnter your choice: ")
-            if choice == "1":
-                DatabaseManager.setup_database()
-            elif choice == "2":
-                confirm = input("Are you sure you want to reset the database? (yes/no): ")
-                if confirm.lower() == "yes":
-                    print("Database reset functionality needs to be implemented.")
-            elif choice == "3":
-                name = input("Enter account name: ")
-                acc_type = input("Enter account type (Real/Paper): ")
-                if acc_type in ["Real", "Paper"]:
-                    DatabaseManager.create_account(name, acc_type)
-                else:
-                    print("Invalid account type.")
-            elif choice == "4":
-                DatabaseManager.view_accounts()
-            elif choice == "5":
-                accounts = DatabaseManager.get_all_accounts()
-                print("\nAvailable Accounts:")
-                for account in accounts:
-                    print(f"ID: {account[0]}, Name: {account[1]}, Type: {account[2]}")
-                account_id = input("Enter the account ID: ")
-                entries = DatabaseManager.view_all_entries(account_id)
-                if entries:
-                    print("\nEntries for Account:")
-                    for entry in entries:
-                        print(entry)
-                else:
-                    print("\nNo entries found for this account.")
-            elif choice == "6":
-                accounts = DatabaseManager.get_all_accounts()
-                print("\nAvailable Accounts:")
-                for account in accounts:
-                    print(f"ID: {account[0]}, Name: {account[1]}, Type: {account[2]}")
-                account_id = input("Enter the account ID: ")
-                entry_id = input("Enter the entry ID to delete: ")
-                DatabaseManager.delete_entry_by_id(account_id, int(entry_id))
-            elif choice == "7":
-                print("If you like this script you may consider offering me a coffee :D")
-                print("Send BEP20, ERC20, BTC, BCH, CRO, LTC, DASH, CELO, ZEC, XRP to:")
-                print(Fore.GREEN, "landifrancesco.wallet", Style.RESET_ALL)
-                break
-            else:
-                print("Invalid choice. Please try again.")
+    run()
