@@ -1,9 +1,5 @@
-import msvcrt
 import sqlite3
 import os
-import sys
-import select
-import time
 from colorama import Fore, Style
 
 # Define directories and database file
