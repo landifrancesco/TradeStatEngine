@@ -18,15 +18,19 @@ def timed_input(prompt, timeout=TIMEOUT_SECONDS):
     """
     sys.stdout.write(prompt)
     sys.stdout.flush()
-    rlist, _, _ = select.select([sys.stdin], [], [], timeout)
-    if rlist:
-        return sys.stdin.readline().strip()
-    else:
-        return None
+    for remaining in range(timeout, 0, -1):
+        sys.stdout.write(f"\r{prompt} {remaining} seconds remaining... ")
+        sys.stdout.flush()
+        rlist, _, _ = select.select([sys.stdin], [], [], 1)
+        if rlist:
+            sys.stdout.write("\n")
+            return sys.stdin.readline().strip()
+    sys.stdout.write("\n")
+    return None
 
 class DatabaseManager:
     """
-    Utility class for interacting with the backups database.
+    Utility class for interacting with the database.
     """
 
     @staticmethod
@@ -35,15 +39,10 @@ class DatabaseManager:
         Create the database and table if they don't exist.
         """
         try:
-            # Ensure the 'data' directory exists
-            data_dir = os.path.join(BASE_DIR, 'data')
-            os.makedirs(data_dir, exist_ok=True)
-
-            # Connect to the database and create tables
+            os.makedirs(DATA_DIR, exist_ok=True)
             conn = sqlite3.connect(DB_NAME)
             cursor = conn.cursor()
 
-            # Create trades table
             cursor.execute("""
                 CREATE TABLE IF NOT EXISTS trades (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -63,18 +62,18 @@ class DatabaseManager:
                     trade_duration_minutes REAL,
                     killzone TEXT,
                     time_writing TEXT
-                )
-            """)
+                );
+            """
+            )
 
-            # Create accounts table
             cursor.execute("""
                 CREATE TABLE IF NOT EXISTS accounts (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,  -- Auto-increment ID
-                    name TEXT NOT NULL,                    -- Name of the account
-                    type TEXT CHECK(type IN ('Real', 'Paper')) NOT NULL  -- Type (Real or Paper)
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    name TEXT NOT NULL,
+                    type TEXT CHECK(type IN ('Real', 'Paper')) NOT NULL
                 );
-            """)
-
+            """
+            )
             conn.commit()
             conn.close()
             print(f"Database '{DB_NAME}' is ready.")
