@@ -1,14 +1,9 @@
 import subprocess
 import sys
 import os
+from utils import database_utils
 
 from app import DB_NAME, DATA_DIR
-
-try:
-    from utils import database_utils
-except ImportError as e:
-    print(f"Error importing database_utils: {e}")
-    sys.exit(1)
 
 def initialize_database_if_needed():
     """

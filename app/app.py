@@ -11,12 +11,11 @@ import sys
 
 app = Flask(__name__)
 
-# Define the base directory for the app
-BASE_DIR = os.path.abspath(os.path.dirname(__file__))
-
-# Define the path to the data directory and the database file
+# Define paths
+BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__)))
 DATA_DIR = os.path.join(BASE_DIR, "data")
 DB_NAME = os.path.join(DATA_DIR, "trades.db")
+
 
 def query_database(query, params=()):
     """
@@ -337,5 +336,4 @@ def strategy_success():
     return jsonify(strategy_stats)
 
 if __name__ == '__main__':
-    # Start the Flask application
-    app.run(debug=False)
+    app.run(host='0.0.0.0', port=5000, debug=False)

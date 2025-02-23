@@ -8,7 +8,7 @@ from tkinter import Tk, filedialog, simpledialog, messagebox
 from app.web_importer import UPLOAD_DIR
 
 # Define paths
-BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "app"))
+BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 DATA_DIR = os.path.join(BASE_DIR, "data")
 DB_NAME = os.path.join(DATA_DIR, "trades.db")
 os.makedirs(UPLOAD_DIR, exist_ok=True)

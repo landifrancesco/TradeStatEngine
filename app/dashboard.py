@@ -480,5 +480,6 @@ def update_dashboard(selected_account, time_writing_toggle):
         worst_trades_list
     )
 
-if __name__ == "__main__":
-    app.run_server(debug=False)
+if __name__ == '__main__':
+    app.run_server(host='0.0.0.0', port=8050, debug=False)
+

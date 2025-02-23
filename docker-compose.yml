@@ -2,12 +2,14 @@ version: '3.8'
 
 services:
   tradestatengine:
-    image: ghcr.io/landifrancesco/tradestatengine:latest
+    build: .
     container_name: tradestatengine
     ports:
+      - "5000:5000"
+      - "5050:5050"
       - "8050:8050"
     volumes:
-      - tradestatengine_data:/app/data
+      - tradestatengine_data:/app/app/data
     restart: always
 
 volumes:

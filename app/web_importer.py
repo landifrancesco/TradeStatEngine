@@ -9,7 +9,7 @@ from datetime import datetime
 from werkzeug.utils import secure_filename
 
 # Define paths
-BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "app"))
+BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__)))
 DATA_DIR = os.path.join(BASE_DIR, "data")
 DB_NAME = os.path.join(DATA_DIR, "trades.db")
 UPLOAD_DIR = os.path.join(DATA_DIR, "uploads")
@@ -209,4 +209,5 @@ def upload_file():
         return jsonify({"error": "Invalid file format"}), 400
 
 if __name__ == '__main__':
-    app.run(port=5050, debug=False)
+    app.run(host='0.0.0.0', port=5050, debug=False)
+

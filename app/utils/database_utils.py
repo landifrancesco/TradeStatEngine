@@ -3,7 +3,7 @@ import os
 from colorama import Fore, Style
 
 # Define directories and database file
-BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "app"))  # Moves one level up to 'app'
+BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 DATA_DIR = os.path.join(BASE_DIR, "data")
 DB_NAME = os.path.join(DATA_DIR, "trades.db")
 
