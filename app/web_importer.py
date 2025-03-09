@@ -197,15 +197,42 @@ def upload_file():
             file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
             file.save(file_path)
             trade_entry = parse_markdown_file(file_path)
+
+            # Ensure trade_entry includes all expected keys, even if empty
+            expected_keys = [
+                "position_size", "opened", "closed", "pips_gained_lost",
+                "profit_loss", "risk_reward", "strategy_used", "open_day",
+                "open_time", "trade_outcome", "open_month",
+                "trade_duration_minutes", "killzone", "time_writing", "filename"
+            ]
+            trade_entry = {key: trade_entry.get(key, "") for key in expected_keys}
+
+            # Include extracted values in the JSON response
+            response_data = {
+                "parsed_data": trade_entry,
+                "message": "",
+                "status": "success"
+            }
+
             if trade_entry:
                 account_id = request.form.get("account_id")
                 if not account_id:
-                    return jsonify({"error": "Account ID is required"}), 400
+                    response_data["message"] = "Account ID is required"
+                    response_data["status"] = "error"
+                    return jsonify(response_data), 400
+
                 if insert_trade_into_db(trade_entry, account_id):
                     move_processed_file(file_path, account_id)
-                    return jsonify({"message": "File uploaded and trade saved successfully"}), 200
-                return jsonify({"error": "Failed to save trade to database"}), 500
-            return jsonify({"error": "Failed to parse the file"}), 500
+                    response_data["message"] = "File uploaded and trade saved successfully"
+                    return jsonify(response_data), 200
+                else:
+                    response_data["message"] = "Failed to save trade to database"
+                    response_data["status"] = "error"
+                    return jsonify(response_data), 500
+            else:
+                response_data["message"] = "Failed to parse the file"
+                response_data["status"] = "error"
+                return jsonify(response_data), 500
         return jsonify({"error": "Invalid file format"}), 400
 
 if __name__ == '__main__':
