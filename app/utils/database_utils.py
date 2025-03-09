@@ -24,8 +24,17 @@ def is_running_in_docker():
 
     return False
 
+def first_run():
+    """
+    Check if the script is running for the first time.
+    """
+    if not os.path.exists(DB_NAME):
+        return True
+    else:
+        return False
+
 def run():
-    if is_running_in_docker():
+    if is_running_in_docker() and first_run():
         print("Running in Docker. Initializing database with default Real account...")
         DatabaseManager.setup_database()
         DatabaseManager.create_account("Default", "Real")
