@@ -1,5 +1,6 @@
 import sqlite3
 import os
+
 from colorama import Fore, Style
 
 # Define directories and database file
@@ -61,7 +62,7 @@ def run():
                     DatabaseManager.create_account(name, acc_type)
                 else:
                     print("Invalid account type.")
-                    
+
             elif choice == "3":
                 DatabaseManager.view_all()
 
@@ -74,7 +75,15 @@ def run():
                 for account in accounts:
                     print(f"ID: {account[0]}, Name: {account[1]}, Type: {account[2]}")
                 account_id = input("Enter the account ID to delete the trade from: ")
-                DatabaseManager.view_all_entries(account_id)
+                trades = DatabaseManager.view_all_entries(account_id)
+                col_widths = [max(len(str(item)) for item in col) for col in zip(*trades)]
+
+                # Print table with borders
+                print("-" * (sum(col_widths) + (len(col_widths) - 1) * 3))
+                for row in trades:
+                    " | ".join(str(item).ljust(width) for item, width in zip(row, col_widths))
+                print("-" * (sum(col_widths) + (len(col_widths) - 1) * 3))
+
                 entry_id = input("Enter the entry ID to delete: ")
                 DatabaseManager.delete_entry_by_id(account_id, int(entry_id))
 
