@@ -43,50 +43,51 @@ def run():
         while True:
             print("\nDatabase Utility:")
             print("1. Setup Database")
-            print("2. Reset Database")
-            print("3. Add account")
-            print("4. View accounts")
-            print("5. View all entries")
-            print("6. Delete trade")
+            print("2. Add account")
+            print("3. View accounts & entires")
+            print("4. Reset database [DANGEROUS]")
+            print("5. Delete trade")
+            print("6. Delete account")
             print("7. Exit")
 
             choice = input("\nEnter your choice: ")
             if choice == "1":
                 DatabaseManager.setup_database()
+
             elif choice == "2":
-                confirm = input("Are you sure you want to reset the database? (yes/no): ")
-                if confirm.lower() == "yes":
-                    print("Database reset functionality needs to be implemented.")
-            elif choice == "3":
                 name = input("Enter account name: ")
                 acc_type = input("Enter account type (Real/Paper): ")
                 if acc_type in ["Real", "Paper"]:
                     DatabaseManager.create_account(name, acc_type)
                 else:
                     print("Invalid account type.")
+                    
+            elif choice == "3":
+                DatabaseManager.view_all()
+
             elif choice == "4":
-                DatabaseManager.view_accounts()
+                DatabaseManager.reset_database()
+
             elif choice == "5":
                 accounts = DatabaseManager.get_all_accounts()
-                print("\nAvailable Accounts:")
+                print("\nAvailable accounts:")
                 for account in accounts:
                     print(f"ID: {account[0]}, Name: {account[1]}, Type: {account[2]}")
-                account_id = input("Enter the account ID: ")
-                entries = DatabaseManager.view_all_entries(account_id)
-                if entries:
-                    print("\nEntries for Account:")
-                    for entry in entries:
-                        print(entry)
-                else:
-                    print("\nNo entries found for this account.")
+                account_id = input("Enter the account ID to delete the trade from: ")
+                DatabaseManager.view_all_entries(account_id)
+                entry_id = input("Enter the entry ID to delete: ")
+                DatabaseManager.delete_entry_by_id(account_id, int(entry_id))
+
             elif choice == "6":
                 accounts = DatabaseManager.get_all_accounts()
                 print("\nAvailable Accounts:")
                 for account in accounts:
                     print(f"ID: {account[0]}, Name: {account[1]}, Type: {account[2]}")
-                account_id = input("Enter the account ID: ")
-                entry_id = input("Enter the entry ID to delete: ")
-                DatabaseManager.delete_entry_by_id(account_id, int(entry_id))
+                account_id = input("Enter the account ID to delete:")
+                confirm = input("Are you completely sure to delete this account? (yes/no): ")
+                if confirm.lower() == "yes":
+                    DatabaseManager.delete_account(account_id)
+
             elif choice == "7":
                 print("If you like this script you may consider offering me a coffee :D")
                 print("Send BEP20, ERC20, BTC, BCH, CRO, LTC, DASH, CELO, ZEC, XRP to:")
@@ -157,13 +158,13 @@ class DatabaseManager:
             cursor = conn.cursor()
 
             confirm = input(
-                "Are you sure you want to reset the database? This will delete all rows but keep the schema. (yes/no): "
+                "Are you sure you want to delete all accounts & trades from the database? (yes/no): "
             ).lower()
             if confirm == "yes":
                 cursor.execute("DELETE FROM trades")
                 cursor.execute("DELETE FROM accounts")
                 conn.commit()
-                print("All rows in the 'trades' and 'accounts' tables have been cleared.")
+                print("Database reset was successful.")
             else:
                 print("Reset cancelled.")
         except sqlite3.OperationalError as e:
@@ -226,7 +227,7 @@ class DatabaseManager:
         print(f"Account ID: {account_id} | Name: {account_name} | Type: {account_type}")
 
     @staticmethod
-    def view_accounts():
+    def view_all():
         """
         Display all accounts along with the count of trades linked to each account.
         """
@@ -344,6 +345,26 @@ class DatabaseManager:
             print(f"Entry with ID '{entry_id}' has been deleted.")
         except Exception as e:
             print(f"Error deleting entry with ID '{entry_id}': {e}")
+
+    @staticmethod
+    def delete_account(account_id):
+        """
+        Delete an account by its ID.
+        """
+        try:
+            conn = sqlite3.connect(DB_NAME)
+            cursor = conn.cursor()
+
+            # Delete all trades associated with the account
+            cursor.execute("DELETE FROM trades WHERE account_id = ?", (account_id,))
+            # Delete the account itself
+            cursor.execute("DELETE FROM accounts WHERE id = ?", (account_id,))
+
+            print(f"Account with ID '{account_id}' has been deleted.")
+
+        except Exception as e:
+            print(f"Error deleting entry with ID '{account_id}': {e}")
+
 
 
 if __name__ == "__main__":
