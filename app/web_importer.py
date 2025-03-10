@@ -56,7 +56,7 @@ def parse_markdown_file(file_path):
             "opened": r"Opened:\s*[\*_~]*(\d{2}/\d{2}/\d{4} \d{2}:\d{2})[\*_~]*",
             "closed": r"Closed:\s*[\*_~]*(\d{2}/\d{2}/\d{4} \d{2}:\d{2})[\*_~]*",
             "pips_gained_lost": r"Pips\s*Gained/Lost:\s*[\*_~]*([+-]?\d+)[\*_~]*",
-            "profit_loss": r"Profit/Loss:\s*[\*_~]*([+-]?\d+\.\d+[€$])[\*_~]*",
+            "profit_loss": r"Profit/Loss:\s*[\*_~]*([+-]?\d+(?:\.\d+)?[€$])[\*_~]*",
             "risk_reward": r"R/R:\s*[\*_~]*([\d\.]+)[\*_~]*",
             "strategy_used": r"Strategy\s*[Uu]sed:\s*[\*_~]*([^\n\*_~]+)[\*_~]*",
         }
@@ -67,9 +67,13 @@ def parse_markdown_file(file_path):
                 trade_entry[key] = clean_markdown_text(match.group(1).strip())
 
         # Extract the first occurrence of the time of writing
-        time_writing_match = re.search(r"Time writing:\s*[\*_~]*(\d{2}/\d{2}/\d{4} \d{2}:\d{2})[\*_~]*", content)
+        time_writing_match = re.search(r"Time writing:\s*(\d{2}:\d{2}) (\d{2}/\d{2}/\d{4})", text)
         if time_writing_match:
-            trade_entry["time_writing"] = time_writing_match.group(1)
+            raw_time = f"{time_writing_match.group(2)} {time_writing_match.group(1)}"
+            # Parse into datetime and reformat as the other dates
+            dt = datetime.strptime(raw_time, "%d/%m/%Y %H:%M")
+            formatted_time_writing = dt.strftime("%d/%m/%Y %H:%M")
+            trade_entry["time_writing"] = formatted_time_writing
 
         # Parse opened and closed timestamps
         raw_opened = trade_entry.get("opened", "").strip()
