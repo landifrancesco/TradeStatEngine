@@ -35,9 +35,6 @@ pip install -r requirements.txt
    - (Optional) open your browser and visit: [http://127.0.0.1:5050/upload](http://127.0.0.1:5050/upload).
    - Use the provided interface to select an account from the dropdown and upload your markdown file(s). The web importer will parse your entries and import them into the database.
 
-5. **(Optional) Use the Markdown Parser Directly**:
-   - If you prefer not to rely on the web importer interface, you can use the `markdown_parser.py` script located under the `utils` directory to parse and import your markdown files directly.
-
 ## 🐳 Docker Deployment 
 
 ### **Run with Docker (Pull from GHCR)**
