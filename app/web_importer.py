@@ -35,14 +35,6 @@ def fetch_data(endpoint, params=None):
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
-# Clean Markdown Text
-def clean_markdown_text(text):
-    if not text:
-        return ""
-    text = re.sub(r'(\*\*|__)(.*?)\1', r'\2', text)  # Remove bold and italic markers
-    text = re.sub(r'(\*|_)(.*?)\1', r'\2', text)       # Remove stray markers
-    return text.strip()
-
 # Parse Markdown File
 def parse_markdown_file(file_path):
     trade_entry = {}
@@ -64,10 +56,10 @@ def parse_markdown_file(file_path):
         for key, pattern in fields.items():
             match = re.search(pattern, content, re.IGNORECASE)
             if match:
-                trade_entry[key] = clean_markdown_text(match.group(1).strip())
+                trade_entry[key] = match.group(1).strip()
 
         # Extract the first occurrence of the time of writing
-        time_writing_match = re.search(r"Time writing:\s*(\d{2}:\d{2}) (\d{2}/\d{2}/\d{4})", text)
+        time_writing_match = re.search(r"Time writing:\s*(\d{2}:\d{2}) (\d{2}/\d{2}/\d{4})", content)
         if time_writing_match:
             raw_time = f"{time_writing_match.group(2)} {time_writing_match.group(1)}"
             # Parse into datetime and reformat as the other dates
@@ -80,8 +72,8 @@ def parse_markdown_file(file_path):
         raw_closed = trade_entry.get("closed", "").strip()
         if raw_opened and raw_closed:
             try:
-                opened_time = datetime.strptime(clean_markdown_text(raw_opened), "%d/%m/%Y %H:%M")
-                closed_time = datetime.strptime(clean_markdown_text(raw_closed), "%d/%m/%Y %H:%M")
+                opened_time = datetime.strptime(raw_opened, "%d/%m/%Y %H:%M")
+                closed_time = datetime.strptime(raw_closed, "%d/%m/%Y %H:%M")
                 trade_entry["trade_duration_minutes"] = max(0, (closed_time - opened_time).total_seconds() // 60)
                 trade_entry["open_day"] = opened_time.strftime("%A")
                 trade_entry["open_time"] = opened_time.strftime("%H:%M")
@@ -117,7 +109,7 @@ def parse_markdown_file(file_path):
 def determine_killzone(opened_time):
     try:
         rome_tz = pytz.timezone("Europe/Rome")
-        opened_time = datetime.strptime(clean_markdown_text(opened_time), "%d/%m/%Y %H:%M").astimezone(rome_tz)
+        opened_time = datetime.strptime(opened_time.strip(), "%d/%m/%Y %H:%M").astimezone(rome_tz)
         hour = opened_time.hour
         if 2 <= hour < 5:
             return "London"
