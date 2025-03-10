@@ -55,8 +55,8 @@ def parse_markdown_file(file_path):
             "position_size": r"Position\s*Size:\s*[\*_~]*([\d\.]+)[\*_~]*",
             "opened": r"Opened:\s*[\*_~]*(\d{2}/\d{2}/\d{4} \d{2}:\d{2})[\*_~]*",
             "closed": r"Closed:\s*[\*_~]*(\d{2}/\d{2}/\d{4} \d{2}:\d{2})[\*_~]*",
-            "pips_gained_lost": r"Pips\s*Gained/Lost:\s*[\*_~]*([\d\.]+)[\*_~]*",
-            "profit_loss": r"Profit/Loss:\s*[\*_~]*([\+\-]?\d+\.\d+[€$])[\*_~]*",
+            "pips_gained_lost": r"Pips\s*Gained/Lost:\s*[\*_~]*([+-]?\d+)[\*_~]*",
+            "profit_loss": r"Profit/Loss:\s*[\*_~]*([+-]?\d+\.\d+[€$])[\*_~]*",
             "risk_reward": r"R/R:\s*[\*_~]*([\d\.]+)[\*_~]*",
             "strategy_used": r"Strategy\s*Used:\s*[\*_~]*(.*?)[\*_~]*$",
         }
