@@ -132,7 +132,7 @@ def monthly_performance():
     for time_writing, opened, profit_loss in rows:
         try:
             if time_writing_mode and time_writing:
-                time_obj = datetime.strptime(time_writing.strip(), "%H:%M %d/%m/%Y")
+                time_obj = datetime.strptime(time_writing.strip(), "%d/%m/%Y %H:%M")
                 month_key = time_obj.strftime("%Y-%m")
             elif opened:
                 time_obj = datetime.strptime(opened.strip(), "%d/%m/%Y %H:%M")
