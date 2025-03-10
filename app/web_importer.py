@@ -67,7 +67,7 @@ def parse_markdown_file(file_path):
                 trade_entry[key] = clean_markdown_text(match.group(1).strip())
 
         # Extract the first occurence of the time of writing
-        time_writing_match = re.search(r"Time writing:\s*(\d{2}:\d{2} \d{2}/\d{2}/\d{4})", file_content)
+        time_writing_match = re.search(r"Time writing:\s*(\d{2}:\d{2} \d{2}/\d{2}/\d{4})", content)
         if time_writing_match:
             trade_entry["time_writing"] = time_writing_match.group(1)
 
