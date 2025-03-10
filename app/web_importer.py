@@ -58,7 +58,7 @@ def parse_markdown_file(file_path):
             "pips_gained_lost": r"Pips\s*Gained/Lost:\s*[\*_~]*([+-]?\d+)[\*_~]*",
             "profit_loss": r"Profit/Loss:\s*[\*_~]*([+-]?\d+\.\d+[€$])[\*_~]*",
             "risk_reward": r"R/R:\s*[\*_~]*([\d\.]+)[\*_~]*",
-            "strategy_used": r"Strategy\s*Used:\s*[\*_~]*(.*?)[\*_~]*$",
+            "strategy_used": r"Strategy\s*[Uu]sed:\s*[\*_~]*([^\n\*_~]+)[\*_~]*",
         }
 
         for key, pattern in fields.items():
@@ -66,8 +66,8 @@ def parse_markdown_file(file_path):
             if match:
                 trade_entry[key] = clean_markdown_text(match.group(1).strip())
 
-        # Extract the first occurence of the time of writing
-        time_writing_match = re.search(r"Time writing:\s*(\d{2}:\d{2} \d{2}/\d{2}/\d{4})", content)
+        # Extract the first occurrence of the time of writing
+        time_writing_match = re.search(r"Time writing:\s*[\*_~]*(\d{2}/\d{2}/\d{4} \d{2}:\d{2})[\*_~]*", content)
         if time_writing_match:
             trade_entry["time_writing"] = time_writing_match.group(1)
 
