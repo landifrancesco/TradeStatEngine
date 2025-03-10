@@ -70,22 +70,13 @@ def run():
                 DatabaseManager.reset_database()
 
             elif choice == "5":
-                accounts = DatabaseManager.get_all_accounts()
-                print("\nAvailable accounts:")
-                for account in accounts:
-                    print(f"ID: {account[0]}, Name: {account[1]}, Type: {account[2]}")
+                DatabaseManager.view_all()
                 account_id = input("Enter the account ID to delete the trade from: ")
-                trades = DatabaseManager.view_all_entries(account_id)
-                col_widths = [max(len(str(item)) for item in col) for col in zip(*trades)]
+                entry_id = input("Enter the trade ID to delete: ")
+                confirm = input("Are you completely sure to delete this trade? (yes/no): ")
+                if confirm.lower() == "yes":
+                    DatabaseManager.delete_entry_by_id(account_id, entry_id)
 
-                # Print table with borders
-                print("-" * (sum(col_widths) + (len(col_widths) - 1) * 3))
-                for row in trades:
-                    " | ".join(str(item).ljust(width) for item, width in zip(row, col_widths))
-                print("-" * (sum(col_widths) + (len(col_widths) - 1) * 3))
-
-                entry_id = input("Enter the entry ID to delete: ")
-                DatabaseManager.delete_entry_by_id(account_id, int(entry_id))
 
             elif choice == "6":
                 accounts = DatabaseManager.get_all_accounts()
@@ -238,31 +229,53 @@ class DatabaseManager:
     @staticmethod
     def view_all():
         """
-        Display all accounts along with the count of trades linked to each account.
+        Display all accounts along with detailed trades linked to each account.
         """
         try:
             conn = sqlite3.connect(DB_NAME)
             cursor = conn.cursor()
-            cursor.execute("""
-                SELECT a.id, a.name, a.type, COUNT(t.id) AS trade_count
-                FROM accounts a
-                LEFT JOIN trades t ON a.id = t.account_id
-                GROUP BY a.id, a.name, a.type
-                ORDER BY a.id;
-            """)
+
+            cursor.execute("SELECT id, name, type FROM accounts ORDER BY id;")
             accounts = cursor.fetchall()
-            conn.close()
 
             if accounts:
-                print("\nAccounts:")
-                print(f"{'ID':<5} {'Name':<20} {'Type':<10} {'Trade Count':<12}")
-                print("-" * 50)
                 for account in accounts:
-                    print(f"{account[0]:<5} {account[1]:<20} {account[2]:<10} {account[3]:<12}")
+                    print(f"\n{'=' * 60}")
+                    print(f"Account ID: {account[0]} | Name: {account[1]} | Type: {account[2]}")
+                    print(f"{'=' * 60}")
+
+                    cursor.execute("""
+                        SELECT id, filename, position_size, opened, closed, pips_gained_lost,
+                               profit_loss, risk_reward, strategy_used, open_day, open_time,
+                               trade_outcome, open_month, trade_duration_minutes, killzone,
+                               time_writing
+                        FROM trades
+                        WHERE account_id = ?
+                        ORDER BY opened;
+                    """, (account[0],))
+
+                    trades = cursor.fetchall()
+
+                    if trades:
+                        for idx, trade in enumerate(trades, 1):
+                            print(f"\nTrade #{idx}")
+                            print("-" * 60)
+                            labels = ["Trade ID", "Filename", "Position Size", "Opened", "Closed", "Pips Gained/Lost",
+                                      "Profit/Loss", "Risk/Reward", "Strategy Used", "Open Day", "Open Time",
+                                      "Trade Outcome", "Open Month", "Duration (min)", "Killzone", "Recorded At"]
+
+                            for label, value in zip(labels, trade):
+                                print(f"{label:<20}: {value}")
+                    else:
+                        print("No trades found for this account.")
+
             else:
-                print("\nNo account found in the database.")
+                print("No accounts found in the database.")
+
+            conn.close()
+
         except Exception as e:
-            print(f"Error fetching accounts with trade counts: {e}")
+            print(f"Error fetching accounts and trades: {e}")
 
     @staticmethod
     def get_all_accounts():
@@ -323,22 +336,6 @@ class DatabaseManager:
             print(f"Trade '{trade_entry.filename}' already exists in the database.")
         except Exception as e:
             print(f"Error inserting trade '{trade_entry.filename}': {e}")
-
-    @staticmethod
-    def view_all_entries(account_id):
-        """
-        Fetch all trade entries for a given account ID.
-        """
-        try:
-            conn = sqlite3.connect(DB_NAME)
-            cursor = conn.cursor()
-            cursor.execute("SELECT * FROM trades WHERE account_id = ?", (account_id,))
-            entries = cursor.fetchall()
-            conn.close()
-            return entries
-        except Exception as e:
-            print(f"Error fetching entries: {e}")
-            return []
 
     @staticmethod
     def delete_entry_by_id(account_id, entry_id):
