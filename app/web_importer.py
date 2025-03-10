@@ -52,13 +52,13 @@ def parse_markdown_file(file_path):
 
         # Define regex patterns for each field
         fields = {
-            "position_size": r"Position\s*Size:\s*([\d\.]+)",
-            "opened": r"Opened:\s*(\d{2}/\d{2}/\d{4} \d{2}:\d{2})",
-            "closed": r"Closed:\s*(\d{2}/\d{2}/\d{4} \d{2}:\d{2})",
-            "pips_gained_lost": r"Pips\s*Gained/Lost:\s*([\d\.]+)",
-            "profit_loss": r"Profit/Loss:\s*([\+\-]?\d+\.\d+€)",
-            "risk_reward": r"R/R:\s*([\d\.]+)",
-            "strategy_used": r"Strategy\s*Used:\s*(.*)",
+            "position_size": r"Position\s*Size:\s*[\*_~]*([\d\.]+)[\*_~]*",
+            "opened": r"Opened:\s*[\*_~]*(\d{2}/\d{2}/\d{4} \d{2}:\d{2})[\*_~]*",
+            "closed": r"Closed:\s*[\*_~]*(\d{2}/\d{2}/\d{4} \d{2}:\d{2})[\*_~]*",
+            "pips_gained_lost": r"Pips\s*Gained/Lost:\s*[\*_~]*([\d\.]+)[\*_~]*",
+            "profit_loss": r"Profit/Loss:\s*[\*_~]*([\+\-]?\d+\.\d+[€$])[\*_~]*",
+            "risk_reward": r"R/R:\s*[\*_~]*([\d\.]+)[\*_~]*",
+            "strategy_used": r"Strategy\s*Used:\s*[\*_~]*(.*?)[\*_~]*$",
         }
 
         for key, pattern in fields.items():
@@ -66,12 +66,10 @@ def parse_markdown_file(file_path):
             if match:
                 trade_entry[key] = clean_markdown_text(match.group(1).strip())
 
-        # Extract time_writing from the filename
-        filename = os.path.basename(file_path)
-        time_writing_match = re.search(r"(\d{2}_\d{2}_\d{4} \d{2}_\d{2})", filename)
+        # Extract the first occurence of the time of writing
+        time_writing_match = re.search(r"Time writing:\s*(\d{2}:\d{2} \d{2}/\d{2}/\d{4})", file_content)
         if time_writing_match:
-            time_writing = time_writing_match.group(1).replace("_", "/").replace(" ", " ")
-            trade_entry["time_writing"] = time_writing
+            trade_entry["time_writing"] = time_writing_match.group(1)
 
         # Parse opened and closed timestamps
         raw_opened = trade_entry.get("opened", "").strip()
